@@ -1,0 +1,56 @@
+.layout-container {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+.layout-container.layout-resizing {
+  cursor: col-resize;
+}
+
+.layout-container.layout-horizontal.layout-resizing {
+  cursor: row-resize;
+}
+
+.layout-pane {
+  height: 100%;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+
+.layout-pane-left {
+  min-width: 0;
+  min-height: 0;
+}
+
+.layout-pane-right {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.layout-resizer {
+  flex: 0 0 1px;
+  height: 100%;
+  background-color: var(--resizer-color);
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  -webkit-app-region: no-drag;
+}
+
+.layout-resizer.layout-resizer-horizontal {
+  width: 100%;
+  height: 1px;
+  cursor: row-resize;
+}
+
+.layout-resizer:hover {
+  background-color: var(--resizer-hover-color);
+}
+
+.layout-resizing .layout-resizer,
+.layout-resizer:active {
+  background-color: var(--resizer-active-color);
+}

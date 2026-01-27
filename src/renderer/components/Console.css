@@ -1,0 +1,115 @@
+.console-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background-color: var(--console-bg);
+  color: var(--console-text);
+  -webkit-app-region: no-drag;
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--console-header-bg);
+  flex-shrink: 0;
+}
+
+.console-title {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--console-text);
+}
+
+.console-clear-button {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--console-text);
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background-color 0.15s ease;
+}
+
+.console-clear-button:hover {
+  background-color: var(--button-hover-bg);
+}
+
+.console-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  line-height: 1.5;
+}
+
+.console-entry {
+  display: flex;
+  gap: 6px;
+}
+
+.console-entry-info {
+  color: var(--console-text);
+}
+
+.console-entry-warn {
+  color: var(--console-warn);
+}
+
+.console-entry-error {
+  color: var(--console-error);
+}
+
+.console-entry-result {
+  color: var(--console-result, #6a9955);
+}
+
+.console-arrow {
+  color: var(--console-result, #6a9955);
+  opacity: 0.8;
+}
+
+.console-timestamp {
+  margin-right: 8px;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.console-line-number {
+  min-width: 24px;
+  margin-right: 8px;
+  color: var(--console-line-number, #858585);
+  text-align: right;
+  opacity: 0.7;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.console-entry-multiline {
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.console-entry-line {
+  display: flex;
+  line-height: 1.4;
+}
+
+.console-message {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.console-empty {
+  padding: 20px;
+  text-align: center;
+  opacity: 0.5;
+  font-style: italic;
+}

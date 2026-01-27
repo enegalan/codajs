@@ -1,0 +1,11 @@
+CodaJS
+Copyright 2025
+
+This product includes software developed by the following:
+
+- Electron (https://www.electronjs.org/)
+- Monaco Editor (https://microsoft.github.io/monaco-editor/)
+- isolated-vm (https://github.com/laverdet/isolated-vm)
+- React (https://react.dev/)
+
+See LICENSE file for full license information.

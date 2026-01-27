@@ -1,0 +1,821 @@
+* {
+  box-sizing: border-box;
+}
+
+.monaco-editor .scroll-decoration {
+  display: none !important;
+}
+
+:root,
+[data-theme='dark'] {
+  --app-bg: #1e1e1e;
+  --app-text: #d4d4d4;
+  --border-color: #3e3e3e;
+  --tab-bar-bg: #252526;
+  --tab-bar-border: #3e3e3e;
+  --tab-inactive-bg: #2d2d30;
+  --tab-inactive-text: #cccccc;
+  --tab-hover-bg: #37373d;
+  --tab-active-bg: #1e1e1e;
+  --tab-active-text: #ffffff;
+  --tab-active-hover-bg: #252526;
+  --tab-active-indicator: #007acc;
+  --tab-modified-color: #ffa500;
+  --tab-close-color: #cccccc;
+  --tab-close-hover-bg: #505050;
+  --tab-close-hover-color: #ffffff;
+  --tab-add-color: #cccccc;
+  --tab-add-hover-bg: #37373d;
+  --tab-add-hover-color: #ffffff;
+  --toolbar-bg: #252526;
+  --selector-bg: #252526;
+  --selector-text: #d4d4d4;
+  --select-bg: #3c3c3c;
+  --select-text: #d4d4d4;
+  --focus-color: #007acc;
+  --disabled-text: #808080;
+  --loading-text: #808080;
+  --console-bg: #1e1e1e;
+  --console-text: #d4d4d4;
+  --console-header-bg: #252526;
+  --console-warn: #ffa500;
+  --console-error: #f48771;
+  --button-hover-bg: #2d2d30;
+  --resizer-color: #3e3e3e;
+  --resizer-hover-color: #555555;
+  --resizer-active-color: #666666;
+  --sidebar-bg: #333333;
+  --sidebar-button-color: #cccccc;
+  --sidebar-button-hover-bg: #444444;
+  --sidebar-button-hover-color: #ffffff;
+  --execute-color: #4caf50;
+  --stop-color: #f44336;
+  --modal-bg: #252526;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #1e1e1e;
+  --scrollbar-thumb: #424242;
+  --scrollbar-thumb-hover: #555555;
+}
+
+[data-theme='light'] {
+  --app-bg: #ffffff;
+  --app-text: #333333;
+  --border-color: #e0e0e0;
+  --tab-bar-bg: #f3f3f3;
+  --tab-bar-border: #e0e0e0;
+  --tab-inactive-bg: #ececec;
+  --tab-inactive-text: #616161;
+  --tab-hover-bg: #e0e0e0;
+  --tab-active-bg: #ffffff;
+  --tab-active-text: #333333;
+  --tab-active-hover-bg: #f5f5f5;
+  --tab-active-indicator: #007acc;
+  --tab-modified-color: #e67e22;
+  --tab-close-color: #616161;
+  --tab-close-hover-bg: #505050;
+  --tab-close-hover-color: #ffffff;
+  --tab-add-color: #616161;
+  --tab-add-hover-bg: #e0e0e0;
+  --tab-add-hover-color: #333333;
+  --toolbar-bg: #f3f3f3;
+  --selector-bg: #f3f3f3;
+  --selector-text: #333333;
+  --select-bg: #ffffff;
+  --select-text: #333333;
+  --focus-color: #007acc;
+  --disabled-text: #999999;
+  --loading-text: #999999;
+  --console-bg: #ffffff;
+  --console-text: #333333;
+  --console-header-bg: #f3f3f3;
+  --console-warn: #e67e22;
+  --console-error: #e74c3c;
+  --button-hover-bg: #e0e0e0;
+  --resizer-color: #e0e0e0;
+  --resizer-hover-color: #c0c0c0;
+  --resizer-active-color: #a0a0a0;
+  --sidebar-bg: #f3f3f3;
+  --sidebar-button-color: #616161;
+  --sidebar-button-hover-bg: #e0e0e0;
+  --sidebar-button-hover-color: #333333;
+  --execute-color: #27ae60;
+  --stop-color: #e74c3c;
+  --modal-bg: #ffffff;
+  --modal-overlay: rgba(0, 0, 0, 0.3);
+  --editor-theme: vs;
+  --scrollbar-track: #f5f5f5;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+}
+
+[data-theme='dracula'] {
+  --app-bg: #282a36;
+  --app-text: #f8f8f2;
+  --border-color: #44475a;
+  --tab-bar-bg: #21222c;
+  --tab-bar-border: #44475a;
+  --tab-inactive-bg: #282a36;
+  --tab-inactive-text: #6272a4;
+  --tab-hover-bg: #44475a;
+  --tab-active-bg: #282a36;
+  --tab-active-text: #f8f8f2;
+  --tab-active-hover-bg: #44475a;
+  --tab-active-indicator: #bd93f9;
+  --tab-modified-color: #ffb86c;
+  --tab-close-color: #6272a4;
+  --tab-close-hover-bg: #6272a4;
+  --tab-close-hover-color: #f8f8f2;
+  --tab-add-color: #6272a4;
+  --tab-add-hover-bg: #44475a;
+  --tab-add-hover-color: #f8f8f2;
+  --toolbar-bg: #21222c;
+  --selector-bg: #21222c;
+  --selector-text: #f8f8f2;
+  --select-bg: #44475a;
+  --select-text: #f8f8f2;
+  --focus-color: #bd93f9;
+  --disabled-text: #6272a4;
+  --loading-text: #6272a4;
+  --console-bg: #282a36;
+  --console-text: #f8f8f2;
+  --console-header-bg: #21222c;
+  --console-warn: #ffb86c;
+  --console-error: #ff5555;
+  --button-hover-bg: #44475a;
+  --resizer-color: #44475a;
+  --resizer-hover-color: #6272a4;
+  --resizer-active-color: #bd93f9;
+  --sidebar-bg: #21222c;
+  --sidebar-button-color: #6272a4;
+  --sidebar-button-hover-bg: #44475a;
+  --sidebar-button-hover-color: #f8f8f2;
+  --execute-color: #50fa7b;
+  --stop-color: #ff5555;
+  --modal-bg: #21222c;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #282a36;
+  --scrollbar-thumb: #44475a;
+  --scrollbar-thumb-hover: #6272a4;
+}
+
+[data-theme='neon'] {
+  --app-bg: #0d0d0d;
+  --app-text: #00ff00;
+  --border-color: #00ff00;
+  --tab-bar-bg: #0a0a0a;
+  --tab-bar-border: #00ff00;
+  --tab-inactive-bg: #0d0d0d;
+  --tab-inactive-text: #00aa00;
+  --tab-hover-bg: #1a1a1a;
+  --tab-active-bg: #0d0d0d;
+  --tab-active-text: #00ff00;
+  --tab-active-hover-bg: #1a1a1a;
+  --tab-active-indicator: #36bf03;
+  --tab-modified-color: #ff00ff;
+  --tab-close-color: #00aa00;
+  --tab-close-hover-bg: #4c4c4c;
+  --tab-close-hover-color: #ffffff;
+  --tab-add-color: #00aa00;
+  --tab-add-hover-bg: #1a1a1a;
+  --tab-add-hover-color: #00ff00;
+  --toolbar-bg: #0a0a0a;
+  --selector-bg: #0a0a0a;
+  --selector-text: #00ff00;
+  --select-bg: #1a1a1a;
+  --select-text: #00ff00;
+  --focus-color: #36bf03;
+  --disabled-text: #005500;
+  --loading-text: #005500;
+  --console-bg: #0d0d0d;
+  --console-text: #00ff00;
+  --console-header-bg: #0a0a0a;
+  --console-warn: #ffff00;
+  --console-error: #ff0000;
+  --button-hover-bg: #1a1a1a;
+  --resizer-color: #00ff00;
+  --resizer-hover-color: #36bf03;
+  --resizer-active-color: #ff00ff;
+  --sidebar-bg: #0a0a0a;
+  --sidebar-button-color: #00aa00;
+  --sidebar-button-hover-bg: #1a1a1a;
+  --sidebar-button-hover-color: #00ff00;
+  --execute-color: #00ff00;
+  --stop-color: #ff0000;
+  --modal-bg: #0a0a0a;
+  --modal-overlay: rgba(0, 255, 0, 0.1);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #0d0d0d;
+  --scrollbar-thumb: #003300;
+  --scrollbar-thumb-hover: #00ff00;
+}
+
+[data-theme='monokai'] {
+  --app-bg: #272822;
+  --app-text: #f8f8f2;
+  --border-color: #49483e;
+  --tab-bar-bg: #1e1f1c;
+  --tab-bar-border: #49483e;
+  --tab-inactive-bg: #272822;
+  --tab-inactive-text: #75715e;
+  --tab-hover-bg: #3e3d32;
+  --tab-active-bg: #272822;
+  --tab-active-text: #f8f8f2;
+  --tab-active-hover-bg: #3e3d32;
+  --tab-active-indicator: #85c20b;
+  --tab-modified-color: #fd971f;
+  --tab-close-color: #75715e;
+  --tab-close-hover-bg: #75715e;
+  --tab-close-hover-color: #f8f8f2;
+  --tab-add-color: #75715e;
+  --tab-add-hover-bg: #3e3d32;
+  --tab-add-hover-color: #f8f8f2;
+  --toolbar-bg: #1e1f1c;
+  --selector-bg: #1e1f1c;
+  --selector-text: #f8f8f2;
+  --select-bg: #3e3d32;
+  --select-text: #f8f8f2;
+  --focus-color: #85c20b;
+  --disabled-text: #75715e;
+  --loading-text: #75715e;
+  --console-bg: #272822;
+  --console-text: #f8f8f2;
+  --console-header-bg: #1e1f1c;
+  --console-warn: #fd971f;
+  --console-error: #f92672;
+  --button-hover-bg: #3e3d32;
+  --resizer-color: #49483e;
+  --resizer-hover-color: #75715e;
+  --resizer-active-color: #85c20b;
+  --sidebar-bg: #1e1f1c;
+  --sidebar-button-color: #75715e;
+  --sidebar-button-hover-bg: #3e3d32;
+  --sidebar-button-hover-color: #f8f8f2;
+  --execute-color: #85c20b;
+  --stop-color: #f92672;
+  --modal-bg: #1e1f1c;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #272822;
+  --scrollbar-thumb: #49483e;
+  --scrollbar-thumb-hover: #75715e;
+}
+
+[data-theme='nord'] {
+  --app-bg: #2e3440;
+  --app-text: #eceff4;
+  --border-color: #434c5e;
+  --tab-bar-bg: #3b4252;
+  --tab-bar-border: #434c5e;
+  --tab-inactive-bg: #2e3440;
+  --tab-inactive-text: #88c0d0;
+  --tab-hover-bg: #434c5e;
+  --tab-active-bg: #2e3440;
+  --tab-active-text: #eceff4;
+  --tab-active-hover-bg: #434c5e;
+  --tab-active-indicator: #81a1c1;
+  --tab-modified-color: #ebcb8b;
+  --tab-close-color: #88c0d0;
+  --tab-close-hover-bg: #88c0d0;
+  --tab-close-hover-color: #2e3440;
+  --tab-add-color: #88c0d0;
+  --tab-add-hover-bg: #434c5e;
+  --tab-add-hover-color: #eceff4;
+  --toolbar-bg: #3b4252;
+  --selector-bg: #3b4252;
+  --selector-text: #eceff4;
+  --select-bg: #434c5e;
+  --select-text: #eceff4;
+  --focus-color: #81a1c1;
+  --disabled-text: #5e81ac;
+  --loading-text: #5e81ac;
+  --console-bg: #2e3440;
+  --console-text: #eceff4;
+  --console-header-bg: #3b4252;
+  --console-warn: #ebcb8b;
+  --console-error: #bf616a;
+  --button-hover-bg: #434c5e;
+  --resizer-color: #434c5e;
+  --resizer-hover-color: #5e81ac;
+  --resizer-active-color: #81a1c1;
+  --sidebar-bg: #3b4252;
+  --sidebar-button-color: #88c0d0;
+  --sidebar-button-hover-bg: #434c5e;
+  --sidebar-button-hover-color: #eceff4;
+  --execute-color: #a3be8c;
+  --stop-color: #bf616a;
+  --modal-bg: #3b4252;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #2e3440;
+  --scrollbar-thumb: #434c5e;
+  --scrollbar-thumb-hover: #5e81ac;
+}
+
+[data-theme='one-dark'] {
+  --app-bg: #282c34;
+  --app-text: #abb2bf;
+  --border-color: #3e4451;
+  --tab-bar-bg: #21252b;
+  --tab-bar-border: #3e4451;
+  --tab-inactive-bg: #282c34;
+  --tab-inactive-text: #5c6370;
+  --tab-hover-bg: #3e4451;
+  --tab-active-bg: #282c34;
+  --tab-active-text: #abb2bf;
+  --tab-active-hover-bg: #3e4451;
+  --tab-active-indicator: #61afef;
+  --tab-modified-color: #e5c07b;
+  --tab-close-color: #5c6370;
+  --tab-close-hover-bg: #5c6370;
+  --tab-close-hover-color: #abb2bf;
+  --tab-add-color: #5c6370;
+  --tab-add-hover-bg: #3e4451;
+  --tab-add-hover-color: #abb2bf;
+  --toolbar-bg: #21252b;
+  --selector-bg: #21252b;
+  --selector-text: #abb2bf;
+  --select-bg: #3e4451;
+  --select-text: #abb2bf;
+  --focus-color: #61afef;
+  --disabled-text: #5c6370;
+  --loading-text: #5c6370;
+  --console-bg: #282c34;
+  --console-text: #abb2bf;
+  --console-header-bg: #21252b;
+  --console-warn: #e5c07b;
+  --console-error: #e06c75;
+  --button-hover-bg: #3e4451;
+  --resizer-color: #3e4451;
+  --resizer-hover-color: #5c6370;
+  --resizer-active-color: #61afef;
+  --sidebar-bg: #21252b;
+  --sidebar-button-color: #5c6370;
+  --sidebar-button-hover-bg: #3e4451;
+  --sidebar-button-hover-color: #abb2bf;
+  --execute-color: #98c379;
+  --stop-color: #e06c75;
+  --modal-bg: #21252b;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #282c34;
+  --scrollbar-thumb: #3e4451;
+  --scrollbar-thumb-hover: #5c6370;
+}
+
+[data-theme='solarized-dark'] {
+  --app-bg: #002b36;
+  --app-text: #839496;
+  --border-color: #586e75;
+  --tab-bar-bg: #073642;
+  --tab-bar-border: #586e75;
+  --tab-inactive-bg: #002b36;
+  --tab-inactive-text: #657b83;
+  --tab-hover-bg: #073642;
+  --tab-active-bg: #002b36;
+  --tab-active-text: #93a1a1;
+  --tab-active-hover-bg: #073642;
+  --tab-active-indicator: #268bd2;
+  --tab-modified-color: #b58900;
+  --tab-close-color: #657b83;
+  --tab-close-hover-bg: #657b83;
+  --tab-close-hover-color: #fdf6e3;
+  --tab-add-color: #657b83;
+  --tab-add-hover-bg: #073642;
+  --tab-add-hover-color: #93a1a1;
+  --toolbar-bg: #073642;
+  --selector-bg: #073642;
+  --selector-text: #93a1a1;
+  --select-bg: #586e75;
+  --select-text: #fdf6e3;
+  --focus-color: #268bd2;
+  --disabled-text: #657b83;
+  --loading-text: #657b83;
+  --console-bg: #002b36;
+  --console-text: #839496;
+  --console-header-bg: #073642;
+  --console-warn: #b58900;
+  --console-error: #dc322f;
+  --button-hover-bg: #073642;
+  --resizer-color: #586e75;
+  --resizer-hover-color: #657b83;
+  --resizer-active-color: #268bd2;
+  --sidebar-bg: #073642;
+  --sidebar-button-color: #657b83;
+  --sidebar-button-hover-bg: #586e75;
+  --sidebar-button-hover-color: #fdf6e3;
+  --execute-color: #859900;
+  --stop-color: #dc322f;
+  --modal-bg: #073642;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #002b36;
+  --scrollbar-thumb: #586e75;
+  --scrollbar-thumb-hover: #657b83;
+}
+
+[data-theme='solarized-light'] {
+  --app-bg: #fdf6e3;
+  --app-text: #657b83;
+  --border-color: #93a1a1;
+  --tab-bar-bg: #eee8d5;
+  --tab-bar-border: #93a1a1;
+  --tab-inactive-bg: #fdf6e3;
+  --tab-inactive-text: #839496;
+  --tab-hover-bg: #eee8d5;
+  --tab-active-bg: #fdf6e3;
+  --tab-active-text: #586e75;
+  --tab-active-hover-bg: #eee8d5;
+  --tab-active-indicator: #268bd2;
+  --tab-modified-color: #b58900;
+  --tab-close-color: #839496;
+  --tab-close-hover-bg: #93a1a1;
+  --tab-close-hover-color: #fdf6e3;
+  --tab-add-color: #839496;
+  --tab-add-hover-bg: #eee8d5;
+  --tab-add-hover-color: #586e75;
+  --toolbar-bg: #eee8d5;
+  --selector-bg: #eee8d5;
+  --selector-text: #586e75;
+  --select-bg: #fdf6e3;
+  --select-text: #586e75;
+  --focus-color: #268bd2;
+  --disabled-text: #93a1a1;
+  --loading-text: #93a1a1;
+  --console-bg: #fdf6e3;
+  --console-text: #657b83;
+  --console-header-bg: #eee8d5;
+  --console-warn: #b58900;
+  --console-error: #dc322f;
+  --button-hover-bg: #eee8d5;
+  --resizer-color: #93a1a1;
+  --resizer-hover-color: #839496;
+  --resizer-active-color: #268bd2;
+  --sidebar-bg: #eee8d5;
+  --sidebar-button-color: #839496;
+  --sidebar-button-hover-bg: #93a1a1;
+  --sidebar-button-hover-color: #fdf6e3;
+  --execute-color: #859900;
+  --stop-color: #dc322f;
+  --modal-bg: #eee8d5;
+  --modal-overlay: rgba(0, 0, 0, 0.3);
+  --editor-theme: vs;
+  --scrollbar-track: #fdf6e3;
+  --scrollbar-thumb: #93a1a1;
+  --scrollbar-thumb-hover: #839496;
+}
+
+[data-theme='gruvbox'] {
+  --app-bg: #282828;
+  --app-text: #ebdbb2;
+  --border-color: #504945;
+  --tab-bar-bg: #3c3836;
+  --tab-bar-border: #504945;
+  --tab-inactive-bg: #282828;
+  --tab-inactive-text: #928374;
+  --tab-hover-bg: #504945;
+  --tab-active-bg: #282828;
+  --tab-active-text: #fbf1c7;
+  --tab-active-hover-bg: #504945;
+  --tab-active-indicator: #83a598;
+  --tab-modified-color: #fe8019;
+  --tab-close-color: #928374;
+  --tab-close-hover-bg: #928374;
+  --tab-close-hover-color: #fbf1c7;
+  --tab-add-color: #928374;
+  --tab-add-hover-bg: #504945;
+  --tab-add-hover-color: #fbf1c7;
+  --toolbar-bg: #3c3836;
+  --selector-bg: #3c3836;
+  --selector-text: #ebdbb2;
+  --select-bg: #504945;
+  --select-text: #fbf1c7;
+  --focus-color: #83a598;
+  --disabled-text: #928374;
+  --loading-text: #928374;
+  --console-bg: #282828;
+  --console-text: #ebdbb2;
+  --console-header-bg: #3c3836;
+  --console-warn: #fe8019;
+  --console-error: #fb4934;
+  --button-hover-bg: #504945;
+  --resizer-color: #504945;
+  --resizer-hover-color: #928374;
+  --resizer-active-color: #83a598;
+  --sidebar-bg: #3c3836;
+  --sidebar-button-color: #928374;
+  --sidebar-button-hover-bg: #504945;
+  --sidebar-button-hover-color: #fbf1c7;
+  --execute-color: #b8bb26;
+  --stop-color: #fb4934;
+  --modal-bg: #3c3836;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #282828;
+  --scrollbar-thumb: #504945;
+  --scrollbar-thumb-hover: #928374;
+}
+
+[data-theme='tokyo-night'] {
+  --app-bg: #1a1b26;
+  --app-text: #c0caf5;
+  --border-color: #2f3549;
+  --tab-bar-bg: #24283b;
+  --tab-bar-border: #2f3549;
+  --tab-inactive-bg: #1a1b26;
+  --tab-inactive-text: #565f89;
+  --tab-hover-bg: #2f3549;
+  --tab-active-bg: #1a1b26;
+  --tab-active-text: #c0caf5;
+  --tab-active-hover-bg: #2f3549;
+  --tab-active-indicator: #7aa2f7;
+  --tab-modified-color: #e0af68;
+  --tab-close-color: #565f89;
+  --tab-close-hover-bg: #565f89;
+  --tab-close-hover-color: #c0caf5;
+  --tab-add-color: #565f89;
+  --tab-add-hover-bg: #2f3549;
+  --tab-add-hover-color: #c0caf5;
+  --toolbar-bg: #24283b;
+  --selector-bg: #24283b;
+  --selector-text: #c0caf5;
+  --select-bg: #2f3549;
+  --select-text: #c0caf5;
+  --focus-color: #7aa2f7;
+  --disabled-text: #565f89;
+  --loading-text: #565f89;
+  --console-bg: #1a1b26;
+  --console-text: #c0caf5;
+  --console-header-bg: #24283b;
+  --console-warn: #e0af68;
+  --console-error: #f7768e;
+  --button-hover-bg: #2f3549;
+  --resizer-color: #2f3549;
+  --resizer-hover-color: #565f89;
+  --resizer-active-color: #7aa2f7;
+  --sidebar-bg: #24283b;
+  --sidebar-button-color: #565f89;
+  --sidebar-button-hover-bg: #2f3549;
+  --sidebar-button-hover-color: #c0caf5;
+  --execute-color: #9ece6a;
+  --stop-color: #f7768e;
+  --modal-bg: #24283b;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #1a1b26;
+  --scrollbar-thumb: #2f3549;
+  --scrollbar-thumb-hover: #565f89;
+}
+
+[data-theme='synthwave-84'] {
+  --app-bg: #1a1032;
+  --app-text: #f92aad;
+  --border-color: #2d1b4e;
+  --tab-bar-bg: #241b3d;
+  --tab-bar-border: #2d1b4e;
+  --tab-inactive-bg: #1a1032;
+  --tab-inactive-text: #ff7edb;
+  --tab-hover-bg: #2d1b4e;
+  --tab-active-bg: #1a1032;
+  --tab-active-text: #ffb8d1;
+  --tab-active-hover-bg: #2d1b4e;
+  --tab-active-indicator: #36f9f6;
+  --tab-modified-color: #f4d03f;
+  --tab-close-color: #ff7edb;
+  --tab-close-hover-bg: #ff6ac1;
+  --tab-close-hover-color: #1a1032;
+  --tab-add-color: #ff7edb;
+  --tab-add-hover-bg: #2d1b4e;
+  --tab-add-hover-color: #ffb8d1;
+  --toolbar-bg: #241b3d;
+  --selector-bg: #241b3d;
+  --selector-text: #ffb8d1;
+  --select-bg: #2d1b4e;
+  --select-text: #ffb8d1;
+  --focus-color: #36f9f6;
+  --disabled-text: #ff6ac1;
+  --loading-text: #ff6ac1;
+  --console-bg: #1a1032;
+  --console-text: #ffb8d1;
+  --console-header-bg: #241b3d;
+  --console-warn: #f4d03f;
+  --console-error: #ff6ac1;
+  --button-hover-bg: #2d1b4e;
+  --resizer-color: #2d1b4e;
+  --resizer-hover-color: #36f9f6;
+  --resizer-active-color: #ff6ac1;
+  --sidebar-bg: #241b3d;
+  --sidebar-button-color: #ff7edb;
+  --sidebar-button-hover-bg: #2d1b4e;
+  --sidebar-button-hover-color: #ffb8d1;
+  --execute-color: #72f1b8;
+  --stop-color: #ff6ac1;
+  --modal-bg: #241b3d;
+  --modal-overlay: rgba(249, 42, 173, 0.2);
+  --editor-theme: vs-dark;
+  --scrollbar-track: #1a1032;
+  --scrollbar-thumb: #2d1b4e;
+  --scrollbar-thumb-hover: #36f9f6;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  -webkit-app-region: drag !important;
+}
+
+button,
+input,
+select,
+textarea,
+a,
+[role='button'],
+[tabindex],
+.monaco-editor,
+.monaco-editor * {
+  -webkit-app-region: no-drag;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-app-region: drag;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 5px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Synthwave '84 Glow Effects */
+[data-theme='synthwave-84'] .monaco-editor .mtk6 {
+  color: #f92aad;
+  text-shadow:
+    0 0 2px #100c0f,
+    0 0 5px #dc078e33,
+    0 0 10px #fff3;
+}
+
+[data-theme='synthwave-84'] .monaco-editor .mtk3 {
+  color: #6d77b3;
+}
+
+[data-theme='synthwave-84'] .monaco-editor .mtk4 {
+  color: #f97e72;
+}
+
+[data-theme='synthwave-84'] .monaco-editor .mtk10 {
+  color: #fdfdfd;
+  text-shadow:
+    0 0 2px #001716,
+    0 0 3px #03edf975,
+    0 0 5px #03edf975,
+    0 0 8px #03edf975;
+}
+
+[data-theme='synthwave-84'] .monaco-editor .mtk7,
+[data-theme='synthwave-84'] .monaco-editor .mtk9 {
+  color: #fff5f6;
+  text-shadow:
+    0 0 2px #000,
+    0 0 10px #fc1f2c75,
+    0 0 5px #fc1f2c75,
+    0 0 25px #fc1f2c75;
+}
+
+[data-theme='synthwave-84'] .monaco-editor .mtk11 {
+  color: #72f1b8;
+  text-shadow:
+    0 0 2px #100c0f,
+    0 0 10px #257c5575,
+    0 0 35px #21272475;
+}
+
+[data-theme='synthwave-84'] .monaco-editor .mtk8,
+[data-theme='synthwave-84'] .monaco-editor .mtk14 {
+  color: #f4eee4;
+  text-shadow:
+    0 0 2px #393a33,
+    0 0 8px #f39f0575,
+    0 0 2px #f39f0575;
+}
+
+/* Fix browse button visibility in Synthwave '84 */
+[data-theme='synthwave-84'] .settings-browse-button {
+  background-color: #2d1b4e;
+  color: #ffb8d1;
+  border: 1px solid #36f9f6;
+}
+
+[data-theme='synthwave-84'] .settings-browse-button:hover {
+  background-color: #34294f;
+  color: #ffffff;
+  border-color: #ff7edb;
+  box-shadow:
+    0 0 8px rgba(54, 249, 246, 0.4),
+    0 0 15px rgba(255, 126, 219, 0.2);
+}
+
+/* Glow effects for inputs and selects in Synthwave '84 */
+[data-theme='synthwave-84'] .settings-input,
+[data-theme='synthwave-84'] .settings-select {
+  border-color: #2d1b4e;
+}
+
+[data-theme='synthwave-84'] .settings-input:hover,
+[data-theme='synthwave-84'] .settings-select:hover {
+  border-color: #36f9f6;
+  box-shadow: 0 0 5px rgba(54, 249, 246, 0.3);
+}
+
+[data-theme='synthwave-84'] .settings-input:focus,
+[data-theme='synthwave-84'] .settings-select:focus {
+  border-color: #36f9f6;
+  box-shadow:
+    0 0 8px rgba(54, 249, 246, 0.5),
+    0 0 12px rgba(255, 126, 219, 0.3);
+  outline: none;
+}
+
+/* Glow effects for slider in Synthwave '84 */
+[data-theme='synthwave-84'] .settings-range {
+  background: #2d1b4e;
+}
+
+[data-theme='synthwave-84'] .settings-range:hover {
+  background: #34294f;
+  box-shadow: 0 0 5px rgba(54, 249, 246, 0.2);
+}
+
+[data-theme='synthwave-84'] .settings-range:focus {
+  outline: none;
+  box-shadow: 0 0 8px rgba(54, 249, 246, 0.3);
+}
+
+[data-theme='synthwave-84'] .settings-range::-webkit-slider-thumb {
+  background: #36f9f6;
+  border-color: #241b3d;
+  box-shadow:
+    0 0 8px rgba(54, 249, 246, 0.6),
+    0 0 12px rgba(255, 126, 219, 0.3);
+}
+
+[data-theme='synthwave-84'] .settings-range::-webkit-slider-thumb:hover {
+  box-shadow:
+    0 0 12px rgba(54, 249, 246, 0.8),
+    0 0 18px rgba(255, 126, 219, 0.4);
+  transform: scale(1.15);
+}
+
+[data-theme='synthwave-84'] .settings-range::-moz-range-thumb {
+  background: #36f9f6;
+  border-color: #241b3d;
+  box-shadow:
+    0 0 8px rgba(54, 249, 246, 0.6),
+    0 0 12px rgba(255, 126, 219, 0.3);
+}
+
+[data-theme='synthwave-84'] .settings-range::-moz-range-thumb:hover {
+  box-shadow:
+    0 0 12px rgba(54, 249, 246, 0.8),
+    0 0 18px rgba(255, 126, 219, 0.4);
+  transform: scale(1.15);
+}
+
+[data-theme='synthwave-84'] .settings-range::-moz-range-track {
+  background: #2d1b4e;
+}
