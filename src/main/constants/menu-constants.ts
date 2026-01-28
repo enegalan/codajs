@@ -1,0 +1,32 @@
+export const MENU_IDS = {
+  SIDEBAR_MENU_ITEM: 'sidebar-menu-item',
+  CONSOLE_MENU_ITEM: 'console-menu-item',
+  LAYOUT_MENU: 'layout-menu',
+  LAYOUT_VERTICAL: 'layout-vertical',
+  LAYOUT_HORIZONTAL: 'layout-horizontal',
+  THEMES_MENU: 'themes-menu',
+} as const;
+
+export const MENU_ACCELERATORS = {
+  NEW_TAB: 'CmdOrCtrl+T',
+  REOPEN_CLOSED_TAB: 'CmdOrCtrl+Shift+T',
+  OPEN: 'CmdOrCtrl+O',
+  SAVE: 'CmdOrCtrl+S',
+  SAVE_AS: 'CmdOrCtrl+Shift+S',
+  CLOSE: 'CmdOrCtrl+W',
+  REDO: 'CmdOrCtrl+Shift+Z',
+  DELETE_ALL: 'CmdOrCtrl+Shift+K',
+  FIND: 'CmdOrCtrl+F',
+  REPLACE: 'CmdOrCtrl+Alt+F',
+  TOGGLE_LINE_COMMENT: "CmdOrCtrl+'",
+  TOGGLE_BLOCK_COMMENT: "CmdOrCtrl+Alt+'",
+  EXECUTE: 'CmdOrCtrl+R',
+  STOP: 'CmdOrCtrl+Shift+R',
+  KILL: 'CmdOrCtrl+K',
+  FORMAT_CODE: 'CmdOrCtrl+Alt+F',
+  ACTUAL_SIZE: 'CmdOrCtrl+0',
+  INCREASE_FONT_SIZE: 'CmdOrCtrl+Plus',
+  DECREASE_FONT_SIZE: 'CmdOrCtrl+-',
+  TOGGLE_DEVTOOLS: 'CmdOrCtrl+Shift+I',
+  MINIMIZE: 'CmdOrCtrl+M',
+} as const;

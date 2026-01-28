@@ -424,6 +424,104 @@ export class IsolateHost {
     }
   }
 
+  /**
+   * Wrap all intermediate expressions to capture their results
+   */
+  private wrapAllExpressionsWithCapture(script: string): {
+    transformed: string;
+    expressionLines: Map<number, string>;
+  } {
+    const lines = script.split('\n');
+    const expressionLines = new Map<number, string>();
+    const transformedLines: string[] = [];
+
+    // Find the last expression line (non-empty, non-comment, non-declaration)
+    let lastExpressionLine = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const trimmed = lines[i].trim();
+      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+        continue;
+      }
+      if (
+        /^(const|let|var|function|class|if|for|while|do|switch|try|throw|import|export|return)\s/.test(
+          trimmed
+        )
+      ) {
+        continue;
+      }
+      const isExpression =
+        trimmed.endsWith(';') || (!trimmed.includes('=') && !trimmed.includes(':'));
+      if (isExpression) {
+        let expr = trimmed.endsWith(';') ? trimmed.slice(0, -1).trim() : trimmed;
+        const commentIndex = expr.indexOf('//');
+        if (commentIndex >= 0) {
+          expr = expr.substring(0, commentIndex).trim();
+        }
+        if (expr && !/^console\.(log|error|warn|info|debug|trace)\s*\(/.test(expr)) {
+          lastExpressionLine = i;
+          break;
+        }
+      }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Skip empty lines and comments
+      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+        transformedLines.push(line);
+        continue;
+      }
+
+      // Skip declarations (const, let, var, function, class, etc.)
+      if (
+        /^(const|let|var|function|class|if|for|while|do|switch|try|throw|import|export|return)\s/.test(
+          trimmed
+        )
+      ) {
+        transformedLines.push(line);
+        continue;
+      }
+
+      // Check if it's an expression statement (ends with semicolon or is a standalone expression)
+      const isExpression =
+        trimmed.endsWith(';') || (!trimmed.includes('=') && !trimmed.includes(':'));
+
+      if (isExpression) {
+        // Extract the expression (remove semicolon and trailing comments)
+        let expr = trimmed.endsWith(';') ? trimmed.slice(0, -1).trim() : trimmed;
+
+        // Remove trailing comments
+        const commentIndex = expr.indexOf('//');
+        if (commentIndex >= 0) {
+          expr = expr.substring(0, commentIndex).trim();
+        }
+
+        // Skip console.log, console.error, etc. as they're already captured
+        // Also skip the last expression as it will be captured by wrapLastExpressionWithReturn
+        if (
+          expr &&
+          !/^console\.(log|error|warn|info|debug|trace)\s*\(/.test(expr) &&
+          i !== lastExpressionLine
+        ) {
+          // Wrap expression to capture result: __captureResult(expr, lineNumber)
+          const wrapped = `__captureResult(${expr}, ${i + 1});`;
+          transformedLines.push(line.replace(trimmed, wrapped));
+          expressionLines.set(i + 1, expr);
+          continue;
+        }
+      }
+
+      transformedLines.push(line);
+    }
+
+    return {
+      transformed: transformedLines.join('\n'),
+      expressionLines,
+    };
+  }
+
   private wrapLastExpressionWithReturn(script: string): string {
     // Find all statement boundaries at depth 0
     const statementEndPositions: number[] = [];
@@ -701,8 +799,11 @@ export class IsolateHost {
 
     // Transpile ESM imports to CommonJS requires
     const cjsScript = this.transpileEsmToCjs(script);
+    // Transform script to capture all intermediate expression results
+    const { transformed: transformedWithCapture, expressionLines } =
+      this.wrapAllExpressionsWithCapture(cjsScript);
     // Transform script to capture last expression result
-    const transformedScript = this.wrapLastExpressionWithReturn(cjsScript);
+    const transformedScript = this.wrapLastExpressionWithReturn(transformedWithCapture);
 
     // Calculate the line number of the result (last non-empty, non-comment line)
     const resultLine = this.getResultLineNumber(script);
@@ -722,6 +823,16 @@ export class IsolateHost {
       const cjsScript = ${JSON.stringify(cjsScript)};
       const transformedScript = ${JSON.stringify(transformedScript)};
       const resultLine = ${resultLine};
+      const expressionLines = ${JSON.stringify(Array.from(expressionLines.entries()))};
+      
+      // Helper function to capture intermediate expression results
+      const __captureResult = (value, lineNumber) => {
+        // Only capture if the value is not undefined (to avoid showing undefined for void expressions)
+        if (value !== undefined) {
+          output.push({ type: 'result', level: 'info', message: value, line: lineNumber });
+        }
+        return value;
+      };
       
       // First, validate syntax of the transpiled script (ESM->CJS)
       try {
@@ -851,6 +962,7 @@ export class IsolateHost {
           clearImmediate: clearImmediate,
           global: global,
           globalThis: globalThis,
+          __captureResult: __captureResult,
         };
         vm.createContext(sandbox);
         const result = scriptObj.runInContext(sandbox);

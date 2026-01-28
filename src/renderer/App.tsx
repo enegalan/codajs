@@ -500,6 +500,10 @@ const AppContent: React.FC = () => {
 
   const handleTabSwitch = async (tabId: string) => {
     if (tabId === activeTabId) {
+      // Save current tab when clicking on active tab
+      if (activeTab) {
+        await handleSaveToFile();
+      }
       return;
     }
 

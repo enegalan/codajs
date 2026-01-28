@@ -55,7 +55,7 @@ const ConsoleComponent: React.FC<ConsoleProps> = ({
     return null;
   }
 
-  const formatValue = (value: unknown): string => {
+  const formatValue = (value: unknown, isError: boolean = false): string => {
     if (value === null) {
       return 'null';
     }
@@ -63,14 +63,14 @@ const ConsoleComponent: React.FC<ConsoleProps> = ({
       return 'undefined';
     }
     if (typeof value === 'string') {
-      return value;
+      return isError || value === '' ? value : `'${value}'`;
     }
     if (typeof value === 'number' || typeof value === 'boolean') {
       return String(value);
     }
     if (Array.isArray(value)) {
       try {
-        const items = value.map((v) => formatValue(v));
+        const items = value.map((v) => formatValue(v, isError));
         return `[${items.join(', ')}]`;
       } catch {
         return String(value);
@@ -86,12 +86,12 @@ const ConsoleComponent: React.FC<ConsoleProps> = ({
     return String(value);
   };
 
-  const formatMessage = (message: unknown): string => {
+  const formatMessage = (message: unknown, isError: boolean = false): string => {
     // Handle array of arguments from console.log(a, b, c)
     if (Array.isArray(message)) {
-      return message.map((arg) => formatValue(arg)).join(' ');
+      return message.map((arg) => formatValue(arg, isError)).join(' ');
     }
-    return formatValue(message);
+    return formatValue(message, isError);
   };
 
   const getLevelClass = (level: string, type: string): string => {
@@ -113,17 +113,19 @@ const ConsoleComponent: React.FC<ConsoleProps> = ({
     index: number
   ) => {
     // Concatenate all messages from entries in this group
-    const message = group.entries.map((entry) => formatMessage(entry.message)).join(' ');
+    const isError = group.level === 'error' || group.type === 'error';
+    const message = group.entries.map((entry) => formatMessage(entry.message, isError)).join(' ');
     const levelClass = getLevelClass(group.level, group.type);
 
     // For errors with multi-line messages, render each line
     if (message.includes('\n')) {
       const lines = message.split('\n');
+      const startLine = group.line != null ? group.line : 1;
       return (
         <div key={index} className={`console-entry console-entry-multiline ${levelClass}`}>
           {lines.map((line, lineIndex) => (
             <div key={lineIndex} className="console-entry-line">
-              <span className="console-line-number">{lineIndex + 1}</span>
+              <span className="console-line-number">{startLine + lineIndex}</span>
               <span className="console-message">{line}</span>
             </div>
           ))}
@@ -137,12 +139,7 @@ const ConsoleComponent: React.FC<ConsoleProps> = ({
     return (
       <div key={index} className={`console-entry ${levelClass}`}>
         {group.line != null && <span className="console-line-number">{group.line}</span>}
-        {!isEmpty && (
-          <span className="console-message">
-            {group.type === 'result' && <span className="console-arrow"> </span>}
-            {message}
-          </span>
-        )}
+        {!isEmpty && <span className="console-message">{message}</span>}
       </div>
     );
   };

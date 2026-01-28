@@ -70,11 +70,6 @@
   color: var(--console-result, #6a9955);
 }
 
-.console-arrow {
-  color: var(--console-result, #6a9955);
-  opacity: 0.8;
-}
-
 .console-timestamp {
   margin-right: 8px;
   opacity: 0.6;

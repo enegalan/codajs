@@ -53,43 +53,107 @@ export function processExecutionResult(
     });
   }
 
-  // Process console logs (only if no error)
-  if (!hasError && result.output?.logs && result.output.logs.length > 0) {
-    result.output.logs.forEach((log: ScriptLog, index: number) => {
-      entries.push({
-        type: (log.type as LogEntry['type']) || 'log',
-        level: log.level || 'info',
-        message: log.message,
-        timestamp: now + index + 1,
-        line: log.line,
-      });
+  if (hasError) {
+    return entries;
+  }
+
+  // Determine the last line number that has output
+  let lastLineWithOutput = 0;
+
+  // Check logs for the highest line number
+  if (result.output?.logs && result.output.logs.length > 0) {
+    result.output.logs.forEach((log: ScriptLog) => {
+      if (log.line != null && log.line > lastLineWithOutput) {
+        lastLineWithOutput = log.line;
+      }
     });
   }
 
-  // If there's a meaningful return value and no error, show it
-  const outputValue = result.output?.output;
+  // Check result line
   const resultLine = result.output?.resultLine;
-  if (!hasError && outputValue !== undefined && outputValue !== null && resultLine != null) {
-    // Generate empty entries for lines 1 to resultLine-1 to show line numbers
-    if (code && resultLine > 1) {
-      for (let lineNum = 1; lineNum < resultLine; lineNum++) {
+  const outputValue = result.output?.output;
+  if (resultLine != null && outputValue !== undefined && outputValue !== null) {
+    if (resultLine > lastLineWithOutput) {
+      lastLineWithOutput = resultLine;
+    }
+  }
+
+  // If we have code and a last line with output, generate entries for all lines
+  if (code && lastLineWithOutput > 0) {
+    // Create a map to store entries by line number
+    const entriesByLine = new Map<number, LogEntry[]>();
+
+    // Process console logs
+    if (result.output?.logs && result.output.logs.length > 0) {
+      result.output.logs.forEach((log: ScriptLog, index: number) => {
+        const lineNum = log.line ?? lastLineWithOutput;
+        if (!entriesByLine.has(lineNum)) {
+          entriesByLine.set(lineNum, []);
+        }
+        entriesByLine.get(lineNum)!.push({
+          type: (log.type as LogEntry['type']) || 'log',
+          level: log.level || 'info',
+          message: log.message,
+          timestamp: now + index + 1,
+          line: lineNum,
+        });
+      });
+    }
+
+    // Process result value
+    if (resultLine != null && outputValue !== undefined && outputValue !== null) {
+      if (!entriesByLine.has(resultLine)) {
+        entriesByLine.set(resultLine, []);
+      }
+      entriesByLine.get(resultLine)!.push({
+        type: 'result',
+        level: 'info',
+        message: outputValue,
+        timestamp: now + (result.output?.logs?.length || 0) + 1000,
+        line: resultLine,
+      });
+    }
+
+    // Generate entries for all lines from 1 to lastLineWithOutput
+    for (let lineNum = 1; lineNum <= lastLineWithOutput; lineNum++) {
+      const lineEntries = entriesByLine.get(lineNum);
+      if (lineEntries && lineEntries.length > 0) {
+        // Add all entries for this line (they will be grouped by Console component)
+        entries.push(...lineEntries);
+      } else {
+        // Add empty entry to show line number
         entries.push({
           type: 'log',
           level: 'info',
           message: '',
-          timestamp: now + (result.output?.logs?.length || 0) + lineNum,
+          timestamp: now + lineNum,
           line: lineNum,
         });
       }
     }
+  } else {
+    // Fallback: if no code or no last line, just add logs and result as before
+    if (result.output?.logs && result.output.logs.length > 0) {
+      result.output.logs.forEach((log: ScriptLog, index: number) => {
+        entries.push({
+          type: (log.type as LogEntry['type']) || 'log',
+          level: log.level || 'info',
+          message: log.message,
+          timestamp: now + index + 1,
+          line: log.line,
+        });
+      });
+    }
 
-    entries.push({
-      type: 'result',
-      level: 'info',
-      message: outputValue,
-      timestamp: now + (result.output?.logs?.length || 0) + (resultLine || 1) + 1,
-      line: resultLine,
-    });
+    if (resultLine != null && outputValue !== undefined && outputValue !== null) {
+      entries.push({
+        type: 'result',
+        level: 'info',
+        message: outputValue,
+        timestamp: now + (result.output?.logs?.length || 0) + 1000,
+        line: resultLine,
+      });
+    }
   }
 
   return entries;
