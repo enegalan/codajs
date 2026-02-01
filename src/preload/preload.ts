@@ -112,8 +112,10 @@ window.addEventListener('app:console-changed', ((event: CustomEvent<boolean>) =>
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Runtime API
-  executeScript: (script: string, options?: any) =>
+  executeScript: (script: string, options?: Record<string, unknown>) =>
     ipcRenderer.invoke('runtime:execute', script, options),
+  prepareScriptForBrowser: (script: string) =>
+    ipcRenderer.invoke('runtime:prepare-for-browser', script),
   cancelExecution: () => ipcRenderer.invoke('runtime:cancel'),
   getAvailableRuntimes: () => ipcRenderer.invoke('runtime:get-available'),
   setDefaultRuntime: (runtime: string) => ipcRenderer.invoke('runtime:set-default', runtime),

@@ -1,4 +1,11 @@
 /**
  * Barrel exports for renderer services
  */
-export { executeScript, createErrorEntry, type ExecutionOptions } from './executionService';
+export {
+  executeScript,
+  createErrorEntry,
+  cancelBrowserExecution,
+  hasActiveAudio,
+  setAudioStateListener,
+  type ExecutionOptions,
+} from './executionService';

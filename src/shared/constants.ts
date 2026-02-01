@@ -1,5 +1,5 @@
 export const DEFAULT_TIMEOUT = 5000;
-export const DEFAULT_RUNTIME = 'node';
+export const DEFAULT_RUNTIME = 'browser';
 export const MAX_HEAP_SIZE = 128; // MB
 export const COLD_START_TARGET = 500; // ms
 

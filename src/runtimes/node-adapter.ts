@@ -35,11 +35,23 @@ export class NodeAdapter extends BaseRuntimeAdapter {
     return binary !== null;
   }
 
-  public async execute(script: string, options: ExecutionOptions = {}): Promise<any> {
-    // Use isolated-vm for secure execution
+  public async execute(script: string, options: ExecutionOptions = {}): Promise<unknown> {
     return this.isolateHost.execute(script, {
       timeout: options.timeout || 5000,
       permissions: options.permissions || [],
+      signal: options.signal,
     });
+  }
+
+  public prepareScriptForBrowser(script: string): {
+    wrappedScript: string;
+    resultLine: number;
+    expressionLines: Array<[number, string]>;
+  } {
+    return this.isolateHost.prepareScriptForBrowser(script);
+  }
+
+  public override killCurrentExecution(): void {
+    this.isolateHost.killCurrentProcess();
   }
 }

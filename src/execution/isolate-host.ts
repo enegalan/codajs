@@ -1,9 +1,13 @@
-import { spawn } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import { tmpdir } from 'os';
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { SidecarManager } from '../runtimes/sidecar-manager';
 
+/** Runner script inlined at build time so the correct version is always used */
+const BUNDLED_RUNNER_SOURCE: string = require('../../scripts/run-user-script.js'); // eslint-disable-line @typescript-eslint/no-var-requires
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let ivm: any = null;
 try {
   // Use dynamic require to avoid webpack bundling issues
@@ -16,15 +20,18 @@ try {
 export interface IsolateOptions {
   timeout?: number;
   permissions?: string[];
+  signal?: AbortSignal;
 }
 
 // Number of lines in the wrapper before user code starts
 const WRAPPER_LINE_OFFSET = 30;
 
 export class IsolateHost {
-  private isolates: Map<string, any> = new Map();
+  private isolates: Map<string, unknown> = new Map();
   private useIsolatedVm: boolean = ivm !== null;
   private sidecarManager: SidecarManager;
+  private fallbackProcesses: Set<ChildProcess> = new Set();
+  private fallbackLock: Promise<void> = Promise.resolve();
 
   constructor() {
     this.sidecarManager = new SidecarManager();
@@ -354,19 +361,68 @@ export class IsolateHost {
     );
   }
 
-  public async execute(script: string, options: IsolateOptions = {}): Promise<any> {
-    // If script uses modules (import/require), force fallback mode
-    // because isolated-vm doesn't have access to Node.js require
+  public async execute(
+    script: string,
+    options: IsolateOptions = {}
+  ): Promise<{
+    output: unknown;
+    error: string | null;
+    logs: Array<{ type: string; level: string; message: unknown; line?: number }>;
+    resultLine?: number;
+  }> {
     const needsNodeRuntime = this.usesModules(script);
+    const forceFallback =
+      process.env.CODAJS_FORCE_FALLBACK === '1' || process.env.CODAJS_FORCE_FALLBACK === 'true';
+    const preferIsolate =
+      process.env.CODAJS_USE_ISOLATE === '1' || process.env.CODAJS_USE_ISOLATE === 'true';
+    const useIsolate =
+      preferIsolate && this.useIsolatedVm && ivm && !needsNodeRuntime && !forceFallback;
 
-    if (this.useIsolatedVm && ivm && !needsNodeRuntime) {
-      return this.executeWithIsolatedVm(script, options);
-    } else {
-      return this.executeWithFallback(script, options);
+    if (useIsolate) {
+      try {
+        const result = await this.executeWithIsolatedVm(script, options);
+        if (
+          result.error &&
+          /Invalid or unexpected token|missing \) after argument list/.test(result.error)
+        ) {
+          return this.executeWithFallback(script, options);
+        }
+        return result;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/Invalid or unexpected token|missing \) after argument list/.test(msg)) {
+          return this.executeWithFallback(script, options);
+        }
+        throw err;
+      }
     }
+    return this.executeWithFallback(script, options);
   }
 
-  private async executeWithIsolatedVm(script: string, options: IsolateOptions): Promise<any> {
+  public killCurrentProcess(): void {
+    for (const proc of this.fallbackProcesses) {
+      try {
+        proc.kill('SIGKILL');
+      } catch {
+        try {
+          proc.kill();
+        } catch {
+          /* already dead */
+        }
+      }
+    }
+    this.fallbackProcesses.clear();
+  }
+
+  private async executeWithIsolatedVm(
+    script: string,
+    options: IsolateOptions
+  ): Promise<{
+    output: unknown;
+    error: string | null;
+    logs: Array<{ type: string; level: string; message: unknown; line?: number }>;
+    resultLine?: number;
+  }> {
     const isolate = new ivm.Isolate({
       memoryLimit: 128,
     });
@@ -374,46 +430,126 @@ export class IsolateHost {
     const context = await isolate.createContext();
     const jail = context.global;
 
-    // Set up basic console
-    const consoleLog = (...args: any[]) => {
-      // This will be captured by the execution pipeline
-      return args;
-    };
-
+    type LogEntryRaw =
+      | { kind: 'result'; line: number; value: unknown }
+      | { kind: 'log'; level: 'info' | 'warn' | 'error'; args: unknown[] };
+    const logEntries: LogEntryRaw[] = [];
+    const copyFromJail = (v: unknown): unknown =>
+      v != null && typeof (v as { copy?: () => unknown }).copy === 'function'
+        ? (v as { copy: () => unknown }).copy()
+        : v;
+    const makeConsoleCallback = (level: 'info' | 'warn' | 'error') =>
+      function (...args: unknown[]) {
+        const copied = args.map((a) => copyFromJail(a));
+        logEntries.push({ kind: 'log', level, args: copied });
+        return args;
+      };
     await jail.set('console', {
-      log: new ivm.Callback(consoleLog),
-      error: new ivm.Callback(consoleLog),
-      warn: new ivm.Callback(consoleLog),
-      info: new ivm.Callback(consoleLog),
+      log: new ivm.Callback(makeConsoleCallback('info')),
+      error: new ivm.Callback(makeConsoleCallback('error')),
+      warn: new ivm.Callback(makeConsoleCallback('warn')),
+      info: new ivm.Callback(makeConsoleCallback('info')),
     });
+    const captureResult = (value: unknown, line: number) => {
+      const copied = copyFromJail(value);
+      logEntries.push({ kind: 'result', line, value: copied });
+      return value;
+    };
+    await jail.set('__captureResult', new ivm.Callback(captureResult));
 
     // Set up basic globals
     await jail.set('global', context.global);
     await jail.set('globalThis', context.global);
 
+    // Web Audio API is not available in isolated-vm; stub throws a clear error
+    const audioContextStub = new ivm.Callback(function () {
+      throw new Error(
+        'AudioContext is not available in this runtime. Web Audio API is supported when using the Node.js runtime (fallback).'
+      );
+    });
+    await jail.set('AudioContext', audioContextStub);
+
     try {
       // Transpile ESM imports to CommonJS requires
       const cjsScript = this.transpileEsmToCjs(script);
-      // Transform script to capture last expression result
-      const transformedScript = this.wrapLastExpressionWithReturn(cjsScript);
-      const wrappedScript = `(function() { ${transformedScript} })()`;
+      const { transformed: transformedWithCapture } = this.wrapAllExpressionsWithCapture(cjsScript);
+      const transformedScript = this.wrapLastExpressionWithReturn(transformedWithCapture);
+      const scriptForIsolate = transformedScript.replace(/\r\n?/g, '\n').replace(/^\uFEFF/, '');
+      const wrappedScript = '(function(){ { ' + scriptForIsolate + ' } })()';
 
       const scriptHandle = await isolate.compileScript(wrappedScript);
-      const result = await scriptHandle.run(context, {
+      let result = await scriptHandle.run(context, {
         timeout: options.timeout || 5000,
       });
+      const ref = result as { getSync?: (key: string) => unknown };
+      if (ref && typeof ref.getSync === 'function') {
+        const thenFn = ref.getSync('then');
+        if (
+          thenFn &&
+          typeof (thenFn as { applySync?: (r: unknown, a: unknown[]) => void }).applySync ===
+            'function'
+        ) {
+          logEntries.push({
+            kind: 'result',
+            line: this.getResultLineNumber(script),
+            value: { __type: 'promise', state: 'pending' },
+          });
+          const thenRef = thenFn as { applySync: (r: unknown, a: unknown[]) => void };
+          const timeoutMs = options.timeout || 5000;
+          const settled = new Promise<unknown>((resolve, reject) => {
+            const onFulfilled = new ivm.Callback((value: unknown) => {
+              resolve(
+                value != null && typeof (value as { copy?: () => unknown }).copy === 'function'
+                  ? (value as { copy: () => unknown }).copy()
+                  : value
+              );
+            });
+            const onRejected = new ivm.Callback((err: unknown) => reject(err));
+            try {
+              thenRef.applySync(result, [onFulfilled, onRejected]);
+            } catch (e) {
+              reject(e);
+            }
+          });
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Promise execution timeout')), timeoutMs)
+          );
+          result = await Promise.race([settled, timeoutPromise]);
+        }
+      }
+      let serialized = await this.serializeResult(result);
+      const logs = logEntries.map(
+        (entry): { type: string; level: string; message: unknown; line?: number } => {
+          if (entry.kind === 'result') {
+            let message: unknown = entry.value;
+            try {
+              message = JSON.parse(JSON.stringify(entry.value));
+            } catch {
+              message = entry.value;
+            }
+            if (Array.isArray(message) && message.length === 0) {
+              message = false;
+            }
+            return { type: 'result', level: 'info', message, line: entry.line };
+          }
+          const message = entry.args.length === 1 ? entry.args[0] : entry.args;
+          return { type: 'log', level: entry.level, message };
+        }
+      );
 
-      // Serialize result
-      const serialized = await this.serializeResult(result);
+      if (Array.isArray(serialized) && serialized.length === 0) {
+        serialized = false;
+      }
 
       return {
         output: serialized,
         error: null,
-        logs: [],
+        logs,
+        resultLine: this.getResultLineNumber(script),
       };
-    } catch (error: any) {
-      const errorName = error.name || 'Error';
-      const errorMessage = `${errorName}: ${error.message || String(error)}`;
+    } catch (error: unknown) {
+      const errorName = error instanceof Error ? error.name : 'Error';
+      const errorMessage = `${errorName}: ${error instanceof Error ? error.message : String(error)}`;
       return {
         output: null,
         error: errorMessage,
@@ -425,99 +561,219 @@ export class IsolateHost {
   }
 
   /**
-   * Wrap all intermediate expressions to capture their results
+   * Find semicolon positions at depth 0 (statement boundaries)
+   */
+  private getStatementEndPositions(script: string): number[] {
+    const statementEndPositions: number[] = [];
+    let depth = 0;
+    let inString = false;
+    let stringChar = '';
+    let inLineComment = false;
+    let inBlockComment = false;
+    let inTemplateString = false;
+
+    for (let i = 0; i < script.length; i++) {
+      const char = script[i];
+      const nextChar = i < script.length - 1 ? script[i + 1] : '';
+      const prevChar = i > 0 ? script[i - 1] : '';
+
+      if (!inString && !inTemplateString && !inBlockComment && char === '/' && nextChar === '/') {
+        inLineComment = true;
+        continue;
+      }
+      if (inLineComment && char === '\n') {
+        inLineComment = false;
+        if (depth === 0) statementEndPositions.push(i);
+        continue;
+      }
+      if (inLineComment) continue;
+
+      if (!inString && !inTemplateString && !inLineComment && char === '/' && nextChar === '*') {
+        inBlockComment = true;
+        i++;
+        continue;
+      }
+      if (inBlockComment && char === '*' && nextChar === '/') {
+        inBlockComment = false;
+        i++;
+        continue;
+      }
+      if (inBlockComment) continue;
+
+      if (!inString && !inTemplateString && char === '`') {
+        inTemplateString = true;
+        continue;
+      }
+      if (inTemplateString && char === '`' && prevChar !== '\\') {
+        inTemplateString = false;
+        continue;
+      }
+      if (inTemplateString) continue;
+
+      if (!inString && (char === '"' || char === "'")) {
+        inString = true;
+        stringChar = char;
+        continue;
+      }
+      if (inString && char === stringChar && prevChar !== '\\') {
+        inString = false;
+        continue;
+      }
+      if (inString) continue;
+
+      if (char === '{' || char === '(' || char === '[') {
+        depth++;
+      } else if (char === '}' || char === ')' || char === ']') {
+        depth--;
+      } else if (char === ';' && depth === 0) {
+        const beforeSemicolon = script.substring(0, i);
+        const trimmed = beforeSemicolon.replace(/\s+$/, '');
+        if (trimmed.slice(-1) === ')' && trimmed.slice(0, -1).includes('\n')) {
+          continue;
+        }
+        statementEndPositions.push(i);
+      } else if (char === '\n' && depth === 0) {
+        const remaining = script.substring(i + 1);
+        const nextNonWs = remaining.match(/^\s*(\S)/);
+        if (nextNonWs) {
+          const nextToken = nextNonWs[1];
+          const continuationTokens = [
+            '.',
+            ',',
+            '?',
+            ':',
+            '+',
+            '-',
+            '*',
+            '/',
+            '%',
+            '&',
+            '|',
+            '^',
+            '<',
+            '>',
+            '=',
+            '!',
+            '(',
+            '[',
+            '}',
+          ];
+          if (!continuationTokens.includes(nextToken)) {
+            statementEndPositions.push(i);
+          }
+        }
+      }
+    }
+    return statementEndPositions;
+  }
+
+  /**
+   * Wrap expression lines with __captureResult(expr, lineNum). Only wraps complete statements
+   * (line ends with ; or line does not look like continuation: does not end with , ( [ . and does not start with ? :).
    */
   private wrapAllExpressionsWithCapture(script: string): {
     transformed: string;
     expressionLines: Map<number, string>;
   } {
-    const lines = script.split('\n');
+    const normalized = script.replace(/\r\n?/g, '\n');
     const expressionLines = new Map<number, string>();
-    const transformedLines: string[] = [];
-
-    // Find the last expression line (non-empty, non-comment, non-declaration)
-    let lastExpressionLine = -1;
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const trimmed = lines[i].trim();
-      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) {
-        continue;
-      }
-      if (
-        /^(const|let|var|function|class|if|for|while|do|switch|try|throw|import|export|return)\s/.test(
-          trimmed
-        )
-      ) {
-        continue;
-      }
-      const isExpression =
-        trimmed.endsWith(';') || (!trimmed.includes('=') && !trimmed.includes(':'));
-      if (isExpression) {
-        let expr = trimmed.endsWith(';') ? trimmed.slice(0, -1).trim() : trimmed;
-        const commentIndex = expr.indexOf('//');
-        if (commentIndex >= 0) {
-          expr = expr.substring(0, commentIndex).trim();
-        }
-        if (expr && !/^console\.(log|error|warn|info|debug|trace)\s*\(/.test(expr)) {
-          lastExpressionLine = i;
-          break;
-        }
-      }
-    }
+    const lines = normalized.split('\n');
+    const out: string[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
 
-      // Skip empty lines and comments
       if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) {
-        transformedLines.push(line);
+        out.push(line);
         continue;
       }
-
-      // Skip declarations (const, let, var, function, class, etc.)
       if (
         /^(const|let|var|function|class|if|for|while|do|switch|try|throw|import|export|return)\s/.test(
           trimmed
         )
       ) {
-        transformedLines.push(line);
+        out.push(line);
         continue;
       }
-
-      // Check if it's an expression statement (ends with semicolon or is a standalone expression)
-      const isExpression =
-        trimmed.endsWith(';') || (!trimmed.includes('=') && !trimmed.includes(':'));
-
-      if (isExpression) {
-        // Extract the expression (remove semicolon and trailing comments)
-        let expr = trimmed.endsWith(';') ? trimmed.slice(0, -1).trim() : trimmed;
-
-        // Remove trailing comments
-        const commentIndex = expr.indexOf('//');
-        if (commentIndex >= 0) {
-          expr = expr.substring(0, commentIndex).trim();
+      if (/^\s*\)\s*;?\s*$/.test(trimmed)) {
+        out.push(line);
+        continue;
+      }
+      // Closing callback/block like "});" or "})" — do not wrap as expression (would produce invalid __captureResult(});, n))
+      if (/^\s*\}\s*\)\s*;?\s*$/.test(trimmed)) {
+        out.push(line);
+        continue;
+      }
+      if (
+        /^\}\s*,.*\)\s*;\s*$/.test(trimmed) ||
+        /^[})\],]\s*['"].*?['"]\s*\)\s*;\s*$/.test(trimmed)
+      ) {
+        out.push(line);
+        continue;
+      }
+      if (/^\s*[?:]/.test(trimmed)) {
+        out.push(line);
+        continue;
+      }
+      // Method chaining: line starting with . is continuation of previous statement
+      if (/^\s*\.\s*\w/.test(trimmed)) {
+        out.push(line);
+        continue;
+      }
+      // Line that starts a block or arrow-body is never a complete single-line expression
+      if (/\{\s*$/.test(trimmed) || /=>\s*\{\s*$/.test(trimmed)) {
+        out.push(line);
+        continue;
+      }
+      const hasSemicolon = trimmed.endsWith(';');
+      if (!hasSemicolon) {
+        if (/[,[(.]\s*$/.test(trimmed)) {
+          out.push(line);
+          continue;
         }
-
-        // Skip console.log, console.error, etc. as they're already captured
-        // Also skip the last expression as it will be captured by wrapLastExpressionWithReturn
-        if (
-          expr &&
-          !/^console\.(log|error|warn|info|debug|trace)\s*\(/.test(expr) &&
-          i !== lastExpressionLine
-        ) {
-          // Wrap expression to capture result: __captureResult(expr, lineNumber)
-          const wrapped = `__captureResult(${expr}, ${i + 1});`;
-          transformedLines.push(line.replace(trimmed, wrapped));
-          expressionLines.set(i + 1, expr);
+        let nextNonEmpty = '';
+        for (let j = i + 1; j < lines.length; j++) {
+          const t = lines[j].trim();
+          if (t && !t.startsWith('//') && !t.startsWith('/*')) {
+            nextNonEmpty = t;
+            break;
+          }
+        }
+        if (/^\s*\)\s*;?\s*$/.test(nextNonEmpty)) {
+          out.push(line);
+          continue;
+        }
+        // Current line is condition of ternary if next line starts with ? or :
+        if (/^\s*[?:]/.test(nextNonEmpty)) {
+          out.push(line);
+          continue;
+        }
+        // Next line continues with method chain; keep current line unwrapped
+        if (/^\s*\.\s*\w/.test(nextNonEmpty)) {
+          out.push(line);
           continue;
         }
       }
 
-      transformedLines.push(line);
+      let expr = hasSemicolon ? trimmed.slice(0, -1).trim() : trimmed;
+      const commentIdx = expr.indexOf('//');
+      if (commentIdx >= 0) {
+        expr = expr.substring(0, commentIdx).trim();
+      }
+      if (!expr || /^console\.(log|error|warn|info|debug|trace)\s*\(/.test(expr)) {
+        out.push(line);
+        continue;
+      }
+
+      const lineNum = i + 1;
+      const wrapped = line.replace(trimmed, `__captureResult(${expr}, ${lineNum});`);
+      out.push(wrapped);
+      expressionLines.set(lineNum, expr);
     }
 
     return {
-      transformed: transformedLines.join('\n'),
+      transformed: out.join('\n'),
       expressionLines,
     };
   }
@@ -593,7 +849,12 @@ export class IsolateHost {
       } else if (char === '}' || char === ')' || char === ']') {
         depth--;
       } else if (char === ';' && depth === 0) {
-        // Explicit semicolon - definite statement boundary
+        // Do not treat ");" as statement boundary when ) is on a different line (e.g. .repeat(\n  ...\n  );)
+        const beforeSemicolon = script.substring(0, i);
+        const trimmed = beforeSemicolon.replace(/\s+$/, '');
+        if (trimmed.slice(-1) === ')' && trimmed.slice(0, -1).includes('\n')) {
+          continue;
+        }
         statementEndPositions.push(i);
       } else if (char === '\n' && depth === 0) {
         // Newline at depth 0 - potential statement boundary (ASI)
@@ -622,6 +883,7 @@ export class IsolateHost {
             '!',
             '(',
             '[',
+            '}', // closing block of arrow function / object in call like reduce(fn, init)
           ];
           if (!continuationTokens.includes(nextToken)) {
             statementEndPositions.push(i);
@@ -752,6 +1014,12 @@ export class IsolateHost {
       return script;
     }
 
+    // If the last statement looks like a fragment (e.g. "}, '\n');" from reduce(fn, init)),
+    // do not wrap it or we would produce invalid "return (}, '\n');"
+    if (/^[})\],]\s*/.test(lastStatement)) {
+      return script;
+    }
+
     // Remove trailing semicolon if present
     let cleanExpr = lastStatement.endsWith(';') ? lastStatement.slice(0, -1) : lastStatement;
 
@@ -763,6 +1031,11 @@ export class IsolateHost {
       return script;
     }
 
+    // Final guard: wrapping would produce invalid "return (}, ..." or "return (), ..."
+    if (/^[})\],]/.test(cleanExpr.trim())) {
+      return script;
+    }
+
     // Wrap the last expression with return
     if (before.trim()) {
       return `${before}return (${cleanExpr});`;
@@ -770,13 +1043,31 @@ export class IsolateHost {
     return `return (${cleanExpr});`;
   }
 
-  private async executeWithFallback(script: string, options: IsolateOptions): Promise<any> {
+  private async executeWithFallback(
+    script: string,
+    options: IsolateOptions
+  ): Promise<{
+    output: unknown;
+    error: string | null;
+    logs: Array<{ type: string; level: string; message: unknown; line?: number }>;
+    resultLine?: number;
+  }> {
+    const previousLock = this.fallbackLock;
+    let releaseLock!: () => void;
+    this.fallbackLock = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+    await previousLock;
+
+    this.killCurrentProcess();
+
     // Fallback: Use child_process to execute in a separate Node.js process
     // This is less secure than isolated-vm but will work
 
     // Get the Node.js binary path
     const nodeBinary = await this.sidecarManager.getNodeBinary();
     if (!nodeBinary) {
+      releaseLock();
       return {
         output: null,
         error: 'Node.js runtime not found. Please install Node.js.',
@@ -784,235 +1075,202 @@ export class IsolateHost {
       };
     }
 
-    const tempFile = join(
-      tmpdir(),
-      `codajs-${Date.now()}-${Math.random().toString(36).substring(7)}.js`
-    );
+    const prefix = `codajs-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const dataFile = join(tmpdir(), `${prefix}-data.json`);
+    const runnerFile = join(tmpdir(), `${prefix}-runner.js`);
 
     const cleanup = () => {
       try {
-        unlinkSync(tempFile);
-      } catch (error) {
-        // Ignore cleanup errors
+        unlinkSync(dataFile);
+      } catch {
+        // ignore
+      }
+      try {
+        unlinkSync(runnerFile);
+      } catch {
+        // ignore
       }
     };
 
-    // Transpile ESM imports to CommonJS requires
     const cjsScript = this.transpileEsmToCjs(script);
-    // Transform script to capture all intermediate expression results
     const { transformed: transformedWithCapture, expressionLines } =
       this.wrapAllExpressionsWithCapture(cjsScript);
-    // Transform script to capture last expression result
     const transformedScript = this.wrapLastExpressionWithReturn(transformedWithCapture);
-
-    // Calculate the line number of the result (last non-empty, non-comment line)
     const resultLine = this.getResultLineNumber(script);
 
-    // Wrap script to capture output - both scripts are embedded as strings
-    // and executed via vm/Function to ensure syntax errors are caught properly
-    const wrappedScript = `
-      const vm = require('vm');
-      const output = [];
-      const originalLog = console.log;
-      const originalError = console.error;
-      const originalWarn = console.warn;
-      const originalInfo = console.info;
-      
-      // Scripts embedded as strings
-      const originalScript = ${JSON.stringify(script)};
-      const cjsScript = ${JSON.stringify(cjsScript)};
-      const transformedScript = ${JSON.stringify(transformedScript)};
-      const resultLine = ${resultLine};
-      const expressionLines = ${JSON.stringify(Array.from(expressionLines.entries()))};
-      
-      // Helper function to capture intermediate expression results
-      const __captureResult = (value, lineNumber) => {
-        // Only capture if the value is not undefined (to avoid showing undefined for void expressions)
-        if (value !== undefined) {
-          output.push({ type: 'result', level: 'info', message: value, line: lineNumber });
-        }
-        return value;
-      };
-      
-      // First, validate syntax of the transpiled script (ESM->CJS)
-      try {
-        new vm.Script(cjsScript, { filename: 'input.js' });
-      } catch (syntaxError) {
-        // Extract line and column from the syntax error
-        let line = 1;
-        let column = 1;
-        
-        const stack = syntaxError.stack || '';
-        const message = syntaxError.message || '';
-        const stackLines = stack.split('\\n');
-        
-        // Look for "input.js:line" in stack
-        const fileMatch = stack.match(/input\\.js:(\\d+)/);
-        if (fileMatch) {
-          line = parseInt(fileMatch[1], 10);
-        }
-        
-        // Get the source line
-        const srcLines = originalScript.split('\\n');
-        const srcLine = (line > 0 && line <= srcLines.length) ? srcLines[line - 1] : '';
-        
-        // For "missing X" errors, point to end of line where the token should be
-        if (/missing/.test(message)) {
-          column = srcLine.length;
-        } else {
-          // Find caret line (^^^^) to get column
-          for (let i = 0; i < stackLines.length; i++) {
-            if (/^\\s*\\^+\\s*$/.test(stackLines[i])) {
-              const caretPos = stackLines[i].indexOf('^');
-              if (caretPos >= 0) {
-                column = caretPos + 1;
-              }
-              break;
-            }
-          }
-          // Default to end of line if no caret found
-          if (column === 1 && srcLine.length > 0) {
-            column = srcLine.length;
-          }
-        }
-        
-        // Output structured syntax error
-        process.stdout.write(JSON.stringify({
-          success: false,
-          syntaxError: {
-            message: message,
-            line: line,
-            column: column
-          },
-          output: []
-        }) + '\\n');
-        process.exit(0);
+    const runnerSource = BUNDLED_RUNNER_SOURCE;
+    let projectRoot: string = process.cwd();
+    try {
+      const electron = eval('require')('electron');
+      if (electron && electron.app && typeof electron.app.getAppPath === 'function') {
+        projectRoot = electron.app.getAppPath();
       }
-      
-      // Set up console interception with line tracking
-      const getCallerLine = () => {
-        const stack = new Error().stack;
-        if (!stack) return null;
-        const lines = stack.split('\\n');
-        for (let i = 2; i < lines.length; i++) {
-          // Look for script.js (our vm.Script filename) or anonymous
-          const match = lines[i].match(/(?:script\\.js|<anonymous>):(\\d+):(\\d+)/);
-          if (match) {
-            // Subtract 1 to account for the wrapper function line
-            const rawLine = parseInt(match[1], 10);
-            return Math.max(1, rawLine - 1);
-          }
-        }
-        return null;
-      };
-      
-      console.log = (...args) => {
-        output.push({ type: 'log', level: 'info', message: args, line: getCallerLine() });
-        originalLog(...args);
-      };
-      console.error = (...args) => {
-        output.push({ type: 'error', level: 'error', message: args, line: getCallerLine() });
-        originalError(...args);
-      };
-      console.warn = (...args) => {
-        output.push({ type: 'warn', level: 'warn', message: args, line: getCallerLine() });
-        originalWarn(...args);
-      };
-      console.info = (...args) => {
-        output.push({ type: 'info', level: 'info', message: args, line: getCallerLine() });
-        originalInfo(...args);
-      };
-      
-      // Function to extract line number from error stack trace
-      const getErrorLine = (error) => {
-        if (!error || !error.stack) return null;
-        const stackLines = error.stack.split('\\n');
-        for (let i = 0; i < stackLines.length; i++) {
-          // Look for script.js (our vm.Script filename) or anonymous
-          const match = stackLines[i].match(/(?:script\\.js|<anonymous>):(\\d+):(\\d+)/);
-          if (match) {
-            // Subtract 1 to account for the wrapper function line
-            const rawLine = parseInt(match[1], 10);
-            return Math.max(1, rawLine - 1);
-          }
-        }
-        return null;
-      };
-      
-      // Execute the transformed script using vm.Script with require available
-      try {
-        const wrappedCode = '(function() {\\n' + transformedScript + '\\n})()';
-        const scriptObj = new vm.Script(wrappedCode, { filename: 'script.js' });
-        
-        // Create a context with require and other Node.js globals available
-        const sandbox = {
-          require: require,
-          module: module,
-          exports: exports,
-          __dirname: __dirname,
-          __filename: __filename,
-          console: console,
-          process: process,
-          Buffer: Buffer,
-          setTimeout: setTimeout,
-          setInterval: setInterval,
-          setImmediate: setImmediate,
-          clearTimeout: clearTimeout,
-          clearInterval: clearInterval,
-          clearImmediate: clearImmediate,
-          global: global,
-          globalThis: globalThis,
-          __captureResult: __captureResult,
-        };
-        vm.createContext(sandbox);
-        const result = scriptObj.runInContext(sandbox);
-        
-        process.stdout.write(JSON.stringify({ success: true, result, resultLine, output }) + '\\n');
-      } catch (error) {
-        const errorName = error.name || 'Error';
-        const errorMessage = errorName + ': ' + error.message;
-        const errorLine = getErrorLine(error);
-        process.stdout.write(JSON.stringify({ success: false, error: errorMessage, errorLine: errorLine, output }) + '\\n');
-      }
-    `;
+    } catch {
+      /* not in Electron or app not ready */
+    }
 
-    writeFileSync(tempFile, wrappedScript);
+    const payload = {
+      script,
+      cjsScript,
+      transformedScript,
+      resultLine,
+      expressionLines: Array.from(expressionLines.entries()),
+      projectRoot,
+    };
+    writeFileSync(dataFile, JSON.stringify(payload), 'utf8');
+    writeFileSync(runnerFile, runnerSource, 'utf8');
+
+    const nodeModulesPath = join(projectRoot, 'node_modules');
+    const spawnEnv = { ...process.env };
+    const existingNodePath = spawnEnv.NODE_PATH;
+    spawnEnv.NODE_PATH = existingNodePath
+      ? `${nodeModulesPath}${process.platform === 'win32' ? ';' : ':'}${existingNodePath}`
+      : nodeModulesPath;
 
     return new Promise((resolve) => {
-      const proc = spawn(nodeBinary, [tempFile], {
-        timeout: options.timeout || 5000,
+      const proc = spawn(nodeBinary, [runnerFile, dataFile], {
+        cwd: projectRoot,
+        env: spawnEnv,
       });
+      this.fallbackProcesses.add(proc);
+
+      const removeProc = () => {
+        this.fallbackProcesses.delete(proc);
+      };
 
       let stdout = '';
       let stderr = '';
+      let resolved = false;
+
+      const resolveCancelled = () => {
+        if (resolved) return;
+        resolved = true;
+        removeProc();
+        try {
+          proc.kill('SIGKILL');
+        } catch {
+          try {
+            proc.kill();
+          } catch {
+            /* already dead */
+          }
+        }
+        cleanup();
+        resolve({
+          output: null,
+          error: 'Execution cancelled',
+          logs: [],
+        });
+      };
+
+      if (options.signal?.aborted) {
+        resolveCancelled();
+        return;
+      }
+
+      const onAbort = () => {
+        if (resolved) {
+          removeProc();
+          try {
+            proc.kill('SIGKILL');
+          } catch {
+            try {
+              proc.kill();
+            } catch {
+              /* already dead */
+            }
+          }
+          cleanup();
+          return;
+        }
+        resolveCancelled();
+      };
+      options.signal?.addEventListener('abort', onAbort);
+
+      interface ParsedRunnerOutput {
+        syntaxError?: { message: string; line: number; column: number };
+        output?: Array<{ type?: string; level?: string; message?: unknown; line?: number }>;
+        result?: unknown;
+        error?: string | null;
+        errorLine?: number | null;
+        resultLine?: number;
+      }
+      const finishWithResult = (parsed: ParsedRunnerOutput) => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+
+        if (parsed.syntaxError) {
+          const { message, line, column } = parsed.syntaxError;
+          const formattedError = this.buildErrorDisplay(
+            'SyntaxError',
+            message,
+            script,
+            line,
+            column
+          );
+          resolve({
+            output: null,
+            error: formattedError,
+            logs: [],
+          });
+          return;
+        }
+
+        type OutputEntry = { type?: string; level?: string; message?: unknown; line?: number };
+        const logs = (parsed.output || []).map((entry: OutputEntry) => ({
+          type: entry.type || 'log',
+          level: entry.level || 'info',
+          message:
+            entry.message !== undefined ? entry.message : entry.type === 'log' ? [] : undefined,
+          line: entry.line,
+        }));
+        resolve({
+          output: parsed.result,
+          error: parsed.error ?? null,
+          errorLine: parsed.errorLine || null,
+          logs,
+          resultLine: parsed.resultLine,
+        });
+      };
+
+      const tryParseStdout = () => {
+        const allOutput = stdout + stderr;
+        const lines = allOutput.split('\n').filter((l) => l.trim());
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].trim();
+          if (line.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(line);
+              finishWithResult(parsed);
+              return;
+            } catch {
+              /* not valid JSON, keep waiting */
+            }
+          }
+        }
+      };
 
       proc.stdout.on('data', (data: Buffer) => {
         stdout += data.toString();
+        tryParseStdout();
       });
 
       proc.stderr.on('data', (data: Buffer) => {
         stderr += data.toString();
+        tryParseStdout();
       });
 
-      const timeout = setTimeout(() => {
-        proc.kill();
-        cleanup();
-        resolve({
-          output: null,
-          error: 'Execution timeout',
-          logs: [],
-        });
-      }, options.timeout || 5000);
-
       proc.on('close', (code: number) => {
-        clearTimeout(timeout);
+        removeProc();
+        if (resolved) {
+          return;
+        }
+        resolved = true;
         cleanup();
         try {
-          // Try to parse JSON output from stdout or stderr
           const allOutput = stdout + stderr;
           const lines = allOutput.split('\n').filter((l) => l.trim());
-
-          // Find JSON output (could be in stdout or stderr)
           let jsonLine = '';
           for (let i = lines.length - 1; i >= 0; i--) {
             if (lines[i].trim().startsWith('{')) {
@@ -1023,8 +1281,6 @@ export class IsolateHost {
 
           if (jsonLine) {
             const parsed = JSON.parse(jsonLine);
-
-            // Handle syntax error from validation
             if (parsed.syntaxError) {
               const { message, line, column } = parsed.syntaxError;
               const formattedError = this.buildErrorDisplay(
@@ -1041,17 +1297,17 @@ export class IsolateHost {
               });
               return;
             }
-
-            // Keep full log entries with type, level, line, and formatted message
-            const logs = (parsed.output || []).map((entry: any) => ({
+            type StdoutEntry = { type?: string; level?: string; message?: unknown; line?: number };
+            const logs = (parsed.output || []).map((entry: StdoutEntry) => ({
               type: entry.type || 'log',
               level: entry.level || 'info',
-              message: entry.message || [],
+              message:
+                entry.message !== undefined ? entry.message : entry.type === 'log' ? [] : undefined,
               line: entry.line,
             }));
             resolve({
               output: parsed.result,
-              error: parsed.error || null,
+              error: parsed.error ?? null,
               errorLine: parsed.errorLine || null,
               logs,
               resultLine: parsed.resultLine,
@@ -1068,7 +1324,7 @@ export class IsolateHost {
               logs: [],
             });
           }
-        } catch (parseError) {
+        } catch {
           const cleanError = stderr
             ? this.formatSyntaxError(stderr, script, WRAPPER_LINE_OFFSET)
             : code !== 0
@@ -1083,7 +1339,8 @@ export class IsolateHost {
       });
 
       proc.on('error', (error: Error) => {
-        clearTimeout(timeout);
+        if (resolved) return;
+        resolved = true;
         cleanup();
         resolve({
           output: null,
@@ -1091,10 +1348,10 @@ export class IsolateHost {
           logs: [],
         });
       });
-    });
+    }).finally(releaseLock);
   }
 
-  private async serializeResult(result: any): Promise<any> {
+  private async serializeResult(result: unknown): Promise<unknown> {
     // Basic serialization - in production, this would handle circular references
     if (result === null || result === undefined) {
       return result;
@@ -1126,6 +1383,31 @@ export class IsolateHost {
 
   public isIsolatedVmAvailable(): boolean {
     return this.useIsolatedVm;
+  }
+
+  /**
+   * Prepare script for execution in the renderer (browser context with real Web Audio).
+   * Returns wrapped script and metadata; does not execute.
+   */
+  public prepareScriptForBrowser(script: string): {
+    wrappedScript: string;
+    resultLine: number;
+    expressionLines: Array<[number, string]>;
+  } {
+    const cjsScript = this.transpileEsmToCjs(script);
+    const { transformed: transformedWithCapture, expressionLines } =
+      this.wrapAllExpressionsWithCapture(cjsScript);
+    const transformedScript = this.wrapLastExpressionWithReturn(transformedWithCapture);
+    const resultLine = this.getResultLineNumber(script);
+    const wrappedScript =
+      '(function(){ "use strict";\n' +
+      transformedScript.replace(/\r\n?/g, '\n').replace(/^\uFEFF/, '') +
+      '\n})();';
+    return {
+      wrappedScript,
+      resultLine,
+      expressionLines: Array.from(expressionLines.entries()),
+    };
   }
 
   /**

@@ -1,6 +1,7 @@
 export const IPC_CHANNELS = {
   RUNTIME: {
     EXECUTE: 'runtime:execute',
+    PREPARE_FOR_BROWSER: 'runtime:prepare-for-browser',
     GET_AVAILABLE: 'runtime:get-available',
     SET_DEFAULT: 'runtime:set-default',
     CANCEL: 'runtime:cancel',

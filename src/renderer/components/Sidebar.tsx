@@ -43,7 +43,6 @@ const SidebarComponent: React.FC<SidebarProps> = ({
         <button
           className="sidebar-button sidebar-button-stop"
           onClick={onStop}
-          disabled={!isExecuting}
           title={t.sidebar.stop}
         >
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor">

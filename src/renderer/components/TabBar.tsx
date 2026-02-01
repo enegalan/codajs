@@ -6,6 +6,7 @@ import './TabBar.css';
 interface TabBarProps {
   tabs: Tab[];
   activeTabId: string;
+  tabIdWithAudio?: string | null;
   onTabSwitch: (id: string) => void;
   onTabClose: (id: string) => void;
   onTabCloseOthers: (id: string) => void;
@@ -15,9 +16,23 @@ interface TabBarProps {
   onTabReorder: (fromIndex: number, toIndex: number) => void;
 }
 
+const SpeakerIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden
+  >
+    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+  </svg>
+);
+
 export const TabBar: React.FC<TabBarProps> = ({
   tabs,
   activeTabId,
+  tabIdWithAudio = null,
   onTabSwitch,
   onTabClose,
   onTabCloseOthers,
@@ -175,9 +190,18 @@ export const TabBar: React.FC<TabBarProps> = ({
               />
             ) : (
               <>
-                <span className="tab-title">{tab.title}</span>
-                <div className="tab-actions">
+                <span className="tab-title">
+                  <span className="tab-chevron">❯</span> {tab.title}
+                </span>
+                <div
+                  className={`tab-actions${tabIdWithAudio === tab.id ? ' tab-actions-has-audio' : ''}`}
+                >
                   {isModified(tab) && <span className="tab-modified-indicator">•</span>}
+                  {tabIdWithAudio === tab.id && (
+                    <span className="tab-audio-indicator" title="Audio playing">
+                      <SpeakerIcon />
+                    </span>
+                  )}
                   <button
                     className="tab-close-button"
                     onClick={(e) => handleCloseClick(e, tab.id)}

@@ -1,9 +1,18 @@
 declare global {
   interface Window {
     electronAPI: {
-      executeScript: (script: string, options?: any) => Promise<any>;
+      executeScript: (script: string, options?: Record<string, unknown>) => Promise<unknown>;
+      prepareScriptForBrowser: (script: string) => Promise<{
+        success: boolean;
+        wrappedScript?: string;
+        resultLine?: number;
+        expressionLines?: Array<[number, string]>;
+        error?: string;
+      }>;
       cancelExecution: () => Promise<void>;
-      getAvailableRuntimes: () => Promise<any>;
+      getAvailableRuntimes: () => Promise<
+        Array<{ name: string; version: string; available: boolean }>
+      >;
       setDefaultRuntime: (runtime: string) => Promise<void>;
       saveFileAuto: (
         content: string,
@@ -28,10 +37,10 @@ declare global {
       getDefaultSavePath: () => Promise<string>;
       checkPermission: (permission: string) => Promise<boolean>;
       requestPermission: (permission: string) => Promise<string>;
-      listWorkspaces: () => Promise<any[]>;
-      createWorkspace: (name: string) => Promise<any>;
-      resolveDependencies: (imports: string[]) => Promise<any>;
-      installDependency: (packageName: string) => Promise<any>;
+      listWorkspaces: () => Promise<unknown[]>;
+      createWorkspace: (name: string) => Promise<unknown>;
+      resolveDependencies: (imports: string[]) => Promise<unknown>;
+      installDependency: (packageName: string) => Promise<unknown>;
       showTabContextMenu: (tabId: string, tabCount: number) => Promise<string | null>;
     };
   }

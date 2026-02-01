@@ -30,8 +30,11 @@ export const CompilationSettings: React.FC<CompilationSettingsProps> = ({ settin
         <select
           className="settings-select"
           value={settings.defaultRuntime}
-          onChange={(e) => onUpdate({ defaultRuntime: e.target.value as 'node' | 'deno' | 'bun' })}
+          onChange={(e) =>
+            onUpdate({ defaultRuntime: e.target.value as 'node' | 'deno' | 'bun' | 'browser' })
+          }
         >
+          <option value="browser">Browser (Web Audio)</option>
           <option value="node">Node.js</option>
           <option value="deno">Deno</option>
           <option value="bun">Bun</option>

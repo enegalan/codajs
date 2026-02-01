@@ -3,6 +3,7 @@
  */
 export { Console } from './Console';
 export { Editor } from './Editor';
+export { ObjectTreeView } from './ObjectTreeView';
 export { Layout } from './Layout';
 export { SettingsModal } from './SettingsModal/SettingsModal';
 export { Sidebar } from './Sidebar';

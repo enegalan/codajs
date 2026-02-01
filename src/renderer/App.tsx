@@ -10,7 +10,12 @@ import {
   ErrorBoundary,
 } from './components';
 import { useTabManager, useSettings } from './hooks';
-import { executeScript, createErrorEntry } from './services';
+import {
+  executeScript,
+  createErrorEntry,
+  cancelBrowserExecution,
+  setAudioStateListener,
+} from './services';
 import { DEBOUNCE_DELAYS } from './constants';
 import { I18nProvider, useI18n } from './i18n';
 import { AppSettings } from './utils/settingsPersistence';
@@ -21,9 +26,12 @@ const AppContent: React.FC = () => {
   const [isMac, setIsMac] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [tabIdWithAudio, setTabIdWithAudio] = useState<string | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const autoExecuteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastExecutedCodeRef = useRef<string>('');
   const handleTabCloseRef = useRef<(tabId: string) => void>(() => {});
+  const runStartingRef = useRef(false);
 
   const {
     settings,
@@ -37,6 +45,17 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const platform = navigator.platform.toLowerCase();
     setIsMac(platform.includes('mac'));
+  }, []);
+
+  useEffect(() => {
+    const listener = (playing: boolean) => {
+      setIsAudioPlaying(playing);
+      if (!playing && !runStartingRef.current) {
+        setTabIdWithAudio(null);
+      }
+    };
+    setAudioStateListener(listener);
+    return () => setAudioStateListener(null);
   }, []);
 
   // Send theme, locale, layout, sidebar, and console to main process for menu whenever they change
@@ -161,16 +180,22 @@ const AppContent: React.FC = () => {
 
       lastExecutedCodeRef.current = activeTab.code;
       setIsExecuting(true);
+      const runtime = settings.compilation.defaultRuntime;
+      if (runtime === 'browser') {
+        runStartingRef.current = true;
+        setTabIdWithAudio(activeTab.id);
+      }
 
       try {
         const entries = await executeScript(activeTab.code, {
-          runtime: settings.compilation.defaultRuntime,
+          runtime,
           timeout: settings.compilation.timeout,
         });
         updateTab(activeTab.id, { output: entries });
       } catch (error: unknown) {
         updateTab(activeTab.id, { output: [createErrorEntry(error)] });
       } finally {
+        runStartingRef.current = false;
         setIsExecuting(false);
       }
     }, DEBOUNCE_DELAYS.AUTO_EXECUTE);
@@ -180,26 +205,44 @@ const AppContent: React.FC = () => {
         clearTimeout(autoExecuteTimeoutRef.current);
       }
     };
-  }, [activeTab?.code, activeTab?.id, settings.general.autoExecution, updateTab]);
+    // Intentionally omit activeTab, isExecuting, settings.compilation.* to avoid re-running on every execution or settings change
+  }, [activeTab?.code, activeTab?.id, settings.general.autoExecution, updateTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleExecute = useCallback(async () => {
-    if (!activeTab || isExecuting || !activeTab.code.trim()) {
+    if (!activeTab || !activeTab.code.trim()) {
       return;
     }
 
+    if (autoExecuteTimeoutRef.current) {
+      clearTimeout(autoExecuteTimeoutRef.current);
+      autoExecuteTimeoutRef.current = null;
+    }
+    try {
+      await window.electronAPI.cancelExecution();
+    } catch {
+      /* ignore */
+    }
+    setIsExecuting(false);
+
     setIsExecuting(true);
+    const runtime = settings.compilation.defaultRuntime;
+    if (runtime === 'browser') {
+      runStartingRef.current = true;
+      setTabIdWithAudio(activeTab.id);
+    }
     try {
       const entries = await executeScript(activeTab.code, {
-        runtime: settings.compilation.defaultRuntime,
+        runtime,
         timeout: settings.compilation.timeout,
       });
       updateTab(activeTab.id, { output: entries, savedAt: Date.now() });
     } catch (error: unknown) {
       updateTab(activeTab.id, { output: [createErrorEntry(error)] });
     } finally {
+      runStartingRef.current = false;
       setIsExecuting(false);
     }
-  }, [activeTab, isExecuting, settings.compilation, updateTab]);
+  }, [activeTab, settings.compilation, updateTab]);
 
   const handleTabClose = useCallback(
     (tabId: string) => {
@@ -283,16 +326,18 @@ const AppContent: React.FC = () => {
   }, [createTab, settings.compilation.defaultRuntime, settings.general, activeTab, updateTab]);
 
   const handleStop = useCallback(async () => {
-    if (!isExecuting) {
-      return;
+    if (autoExecuteTimeoutRef.current) {
+      clearTimeout(autoExecuteTimeoutRef.current);
+      autoExecuteTimeoutRef.current = null;
     }
+    cancelBrowserExecution();
     try {
       await window.electronAPI.cancelExecution();
     } catch (error) {
       console.error('Failed to cancel execution:', error);
     }
     setIsExecuting(false);
-  }, [isExecuting]);
+  }, []);
 
   const handleSaveToFile = useCallback(async () => {
     if (!activeTab) {
@@ -381,9 +426,6 @@ const AppContent: React.FC = () => {
     };
 
     const handleMenuStop = () => {
-      if (!isExecuting) {
-        return;
-      }
       handleStop();
     };
 
@@ -482,6 +524,8 @@ const AppContent: React.FC = () => {
       window.removeEventListener('menu:set-layout', handleSetLayout as EventListener);
       window.removeEventListener('menu:set-theme', handleSetTheme as EventListener);
     };
+    // isExecuting omitted to avoid re-subscribing on every run/stop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     handleCreateTab,
     restoreLastClosedTab,
@@ -527,6 +571,14 @@ const AppContent: React.FC = () => {
       }
     }
 
+    // Terminate script from the tab we are leaving (stops audio and main-process runs)
+    try {
+      await window.electronAPI.cancelExecution();
+    } catch {
+      /* ignore */
+    }
+    cancelBrowserExecution();
+
     switchTab(tabId);
   };
 
@@ -546,6 +598,7 @@ const AppContent: React.FC = () => {
           <TabBar
             tabs={tabs}
             activeTabId={activeTabId}
+            tabIdWithAudio={isAudioPlaying ? tabIdWithAudio : null}
             onTabSwitch={handleTabSwitch}
             onTabClose={handleTabClose}
             onTabCloseOthers={handleTabCloseOthers}
@@ -583,6 +636,7 @@ const AppContent: React.FC = () => {
                     output={activeTab.output}
                     fontSize={settings.appearance.fontSize}
                     visible={settings.appearance.consoleVisible}
+                    theme={settings.appearance.theme}
                   />
                   {activeTab.inspectedValue && <ValueInspector value={activeTab.inspectedValue} />}
                 </div>

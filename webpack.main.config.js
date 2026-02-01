@@ -17,6 +17,10 @@ module.exports = {
           },
         }],
       },
+      {
+        test: /scripts[\\/]run-user-script\.js$/,
+        type: 'asset/source',
+      },
     ],
   },
   output: {

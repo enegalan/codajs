@@ -102,9 +102,62 @@
   word-break: break-word;
 }
 
+.console-message-inspected {
+  display: block;
+}
+
 .console-empty {
   padding: 20px;
   text-align: center;
   opacity: 0.5;
   font-style: italic;
+}
+
+.console-monaco {
+  flex: 1;
+  min-height: 120px;
+}
+
+.console-container .console-token-string {
+  color: var(--console-token-string);
+}
+
+.console-container .console-token-number {
+  color: var(--console-token-number);
+}
+
+.console-container .console-token-null {
+  color: var(--console-token-null);
+}
+
+.console-container .console-token-boolean {
+  color: var(--console-token-boolean);
+}
+
+.console-container .console-token-undefined {
+  color: var(--console-token-undefined);
+}
+
+.console-container .console-token-keyword {
+  color: var(--console-token-keyword);
+}
+
+.console-container .console-token-function {
+  color: var(--console-token-function);
+}
+
+.console-container .console-token-symbol {
+  color: var(--console-token-symbol);
+}
+
+.console-container .console-token-object-label {
+  color: var(--console-token-object-label);
+}
+
+.console-container .console-token-plain {
+  color: var(--console-token-plain);
+}
+
+.console-container .console-token-error {
+  color: var(--console-error);
 }

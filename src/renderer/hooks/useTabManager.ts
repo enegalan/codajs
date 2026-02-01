@@ -3,7 +3,7 @@ import { Tab } from '../../shared/types';
 import { loadTabs, saveTabs } from '../utils/tabPersistence';
 
 const DEFAULT_CODE = 'console.log("Hello, CodaJS!");';
-const DEFAULT_RUNTIME = 'node';
+const DEFAULT_RUNTIME = 'browser';
 
 const generateTabId = (): string => {
   return `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

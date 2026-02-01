@@ -16,7 +16,7 @@ export interface AppSettings {
 export interface WorkspaceSettings {
   runtime?: string;
   permissions?: Record<string, string>;
-  eslintConfig?: any;
+  eslintConfig?: unknown;
 }
 
 export class AppStore {
@@ -27,7 +27,7 @@ export class AppStore {
     this.store = new Store<AppSettings>({
       name: 'app-settings',
       defaults: {
-        defaultRuntime: 'node',
+        defaultRuntime: 'browser',
         theme: 'dark',
         uiLanguage: undefined,
       },

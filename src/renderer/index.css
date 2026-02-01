@@ -40,6 +40,16 @@
   --console-header-bg: #252526;
   --console-warn: #ffa500;
   --console-error: #f48771;
+  --console-token-string: #ce9178;
+  --console-token-number: #b5cea8;
+  --console-token-null: #569cd6;
+  --console-token-boolean: #569cd6;
+  --console-token-undefined: #569cd6;
+  --console-token-keyword: #c586c0;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #4ec9b0;
+  --console-token-object-label: #4ec9b0;
+  --console-token-plain: #d4d4d4;
   --button-hover-bg: #2d2d30;
   --resizer-color: #3e3e3e;
   --resizer-hover-color: #555555;
@@ -91,6 +101,16 @@
   --console-header-bg: #f3f3f3;
   --console-warn: #e67e22;
   --console-error: #e74c3c;
+  --console-token-string: #a31515;
+  --console-token-number: #098658;
+  --console-token-null: #0000ff;
+  --console-token-boolean: #0000ff;
+  --console-token-undefined: #0000ff;
+  --console-token-keyword: #af00db;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #267f99;
+  --console-token-object-label: #267f99;
+  --console-token-plain: #333333;
   --button-hover-bg: #e0e0e0;
   --resizer-color: #e0e0e0;
   --resizer-hover-color: #c0c0c0;
@@ -142,6 +162,16 @@
   --console-header-bg: #21222c;
   --console-warn: #ffb86c;
   --console-error: #ff5555;
+  --console-token-string: #f1fa8c;
+  --console-token-number: #bd93f9;
+  --console-token-null: #6272a4;
+  --console-token-boolean: #ff79c6;
+  --console-token-undefined: #6272a4;
+  --console-token-keyword: #ff79c6;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #8be9fd;
+  --console-token-object-label: #8be9fd;
+  --console-token-plain: #f8f8f2;
   --button-hover-bg: #44475a;
   --resizer-color: #44475a;
   --resizer-hover-color: #6272a4;
@@ -193,6 +223,16 @@
   --console-header-bg: #0a0a0a;
   --console-warn: #ffff00;
   --console-error: #ff0000;
+  --console-token-string: #00ffff;
+  --console-token-number: #ff00ff;
+  --console-token-null: #888888;
+  --console-token-boolean: #ff00ff;
+  --console-token-undefined: #888888;
+  --console-token-keyword: #ffff00;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #00ffff;
+  --console-token-object-label: #00ffff;
+  --console-token-plain: #00ff00;
   --button-hover-bg: #1a1a1a;
   --resizer-color: #00ff00;
   --resizer-hover-color: #36bf03;
@@ -244,6 +284,16 @@
   --console-header-bg: #1e1f1c;
   --console-warn: #fd971f;
   --console-error: #f92672;
+  --console-token-string: #e6db74;
+  --console-token-number: #ae81ff;
+  --console-token-null: #66d9ef;
+  --console-token-boolean: #66d9ef;
+  --console-token-undefined: #66d9ef;
+  --console-token-keyword: #f92672;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #66d9ef;
+  --console-token-object-label: #a6e22e;
+  --console-token-plain: #f8f8f2;
   --button-hover-bg: #3e3d32;
   --resizer-color: #49483e;
   --resizer-hover-color: #75715e;
@@ -295,6 +345,16 @@
   --console-header-bg: #3b4252;
   --console-warn: #ebcb8b;
   --console-error: #bf616a;
+  --console-token-string: #a3be8c;
+  --console-token-number: #b48ead;
+  --console-token-null: #88c0d0;
+  --console-token-boolean: #88c0d0;
+  --console-token-undefined: #88c0d0;
+  --console-token-keyword: #81a1c1;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #8fbcbb;
+  --console-token-object-label: #8fbcbb;
+  --console-token-plain: #eceff4;
   --button-hover-bg: #434c5e;
   --resizer-color: #434c5e;
   --resizer-hover-color: #5e81ac;
@@ -346,6 +406,16 @@
   --console-header-bg: #21252b;
   --console-warn: #e5c07b;
   --console-error: #e06c75;
+  --console-token-string: #98c379;
+  --console-token-number: #d19a66;
+  --console-token-null: #56b6c2;
+  --console-token-boolean: #56b6c2;
+  --console-token-undefined: #56b6c2;
+  --console-token-keyword: #c678dd;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #56b6c2;
+  --console-token-object-label: #e5c07b;
+  --console-token-plain: #abb2bf;
   --button-hover-bg: #3e4451;
   --resizer-color: #3e4451;
   --resizer-hover-color: #5c6370;
@@ -397,6 +467,16 @@
   --console-header-bg: #073642;
   --console-warn: #b58900;
   --console-error: #dc322f;
+  --console-token-string: #859900;
+  --console-token-number: #d33682;
+  --console-token-null: #6c71c4;
+  --console-token-boolean: #6c71c4;
+  --console-token-undefined: #6c71c4;
+  --console-token-keyword: #cb4b16;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #2aa198;
+  --console-token-object-label: #2aa198;
+  --console-token-plain: #839496;
   --button-hover-bg: #073642;
   --resizer-color: #586e75;
   --resizer-hover-color: #657b83;
@@ -448,6 +528,16 @@
   --console-header-bg: #eee8d5;
   --console-warn: #b58900;
   --console-error: #dc322f;
+  --console-token-string: #859900;
+  --console-token-number: #d33682;
+  --console-token-null: #6c71c4;
+  --console-token-boolean: #6c71c4;
+  --console-token-undefined: #6c71c4;
+  --console-token-keyword: #cb4b16;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #2aa198;
+  --console-token-object-label: #2aa198;
+  --console-token-plain: #657b83;
   --button-hover-bg: #eee8d5;
   --resizer-color: #93a1a1;
   --resizer-hover-color: #839496;
@@ -499,6 +589,16 @@
   --console-header-bg: #3c3836;
   --console-warn: #fe8019;
   --console-error: #fb4934;
+  --console-token-string: #b8bb26;
+  --console-token-number: #d3869b;
+  --console-token-null: #83a598;
+  --console-token-boolean: #83a598;
+  --console-token-undefined: #83a598;
+  --console-token-keyword: #fb4934;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #8ec07c;
+  --console-token-object-label: #8ec07c;
+  --console-token-plain: #ebdbb2;
   --button-hover-bg: #504945;
   --resizer-color: #504945;
   --resizer-hover-color: #928374;
@@ -550,6 +650,16 @@
   --console-header-bg: #24283b;
   --console-warn: #e0af68;
   --console-error: #f7768e;
+  --console-token-string: #9ece6a;
+  --console-token-number: #ff9e64;
+  --console-token-null: #7aa2f7;
+  --console-token-boolean: #7aa2f7;
+  --console-token-undefined: #7aa2f7;
+  --console-token-keyword: #bb9af7;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #73daca;
+  --console-token-object-label: #73daca;
+  --console-token-plain: #c0caf5;
   --button-hover-bg: #2f3549;
   --resizer-color: #2f3549;
   --resizer-hover-color: #565f89;
@@ -572,6 +682,16 @@
   --app-bg: #1a1032;
   --app-text: #f92aad;
   --border-color: #2d1b4e;
+  --console-token-string: #72e1d1;
+  --console-token-number: #f9e2af;
+  --console-token-null: #e879f9;
+  --console-token-boolean: #e879f9;
+  --console-token-undefined: #e879f9;
+  --console-token-keyword: #f38ba8;
+  --console-token-function: #ff79c6;
+  --console-token-symbol: #89dceb;
+  --console-token-object-label: #89dceb;
+  --console-token-plain: #ffb8d1;
   --tab-bar-bg: #241b3d;
   --tab-bar-border: #2d1b4e;
   --tab-inactive-bg: #1a1032;
@@ -679,6 +799,14 @@ a,
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.console-container .monaco-editor-overlaymessage,
+.console-container .monaco-editor .cursors-layer,
+.console-container .monaco-editor .wordHighlightText,
+.monaco-editor .core-guide {
+  display: none !important;
+  visibility: hidden !important;
 }
 
 /* Synthwave '84 Glow Effects */

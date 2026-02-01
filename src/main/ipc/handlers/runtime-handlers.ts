@@ -26,6 +26,27 @@ export function createRuntimeHandlers(
       }
     },
 
+    'runtime:prepare-for-browser': async (
+      event: IpcMainInvokeEvent,
+      script: unknown
+    ): Promise<IpcResponse> => {
+      try {
+        if (typeof script !== 'string') {
+          return { success: false, error: 'Script must be a string' };
+        }
+        if (script.length === 0) {
+          return { success: false, error: 'Script cannot be empty' };
+        }
+        if (script.length > 1000000) {
+          return { success: false, error: 'Script exceeds maximum length (1MB)' };
+        }
+        const prepared = runtimeManager.prepareScriptForBrowser(script);
+        return { success: true, ...prepared };
+      } catch (error: unknown) {
+        return handleIpcError(error, 'Failed to prepare script for browser');
+      }
+    },
+
     'runtime:get-available': async (): Promise<
       Array<{ name: string; version: string; available: boolean }>
     > => {

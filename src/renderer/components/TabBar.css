@@ -75,6 +75,10 @@
   z-index: 2;
 }
 
+.tab-chevron {
+  font-size: 10px;
+}
+
 .tab-title {
   flex: 1;
   overflow: hidden;
@@ -103,9 +107,13 @@
   flex-shrink: 0;
 }
 
+.tab-actions.tab-actions-has-audio {
+  width: 32px;
+}
+
 .tab-modified-indicator {
   position: absolute;
-  top: 0;
+  top: -2px;
   left: 0;
   width: 18px;
   height: 18px;
@@ -116,6 +124,31 @@
   font-weight: bold;
   font-size: 18px;
   pointer-events: none;
+}
+
+.tab-audio-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 18px;
+  display: flex;
+  color: var(--tab-inactive-text, #cccccc);
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.tab-item-active .tab-audio-indicator {
+  color: var(--tab-active-text, #ffffff);
+}
+
+.tab-actions-has-audio .tab-close-button {
+  left: 18px;
+}
+
+.tab-actions-has-audio .tab-modified-indicator {
+  left: 18px;
 }
 
 .tab-close-button {

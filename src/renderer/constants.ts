@@ -27,5 +27,5 @@ export const CONSOLE_DEFAULTS = {
   FONT_SIZE: 12,
 } as const;
 
-// Default runtime
-export const DEFAULT_RUNTIME = 'node' as const;
+// Default runtime (browser = real Web Audio in renderer)
+export const DEFAULT_RUNTIME = 'browser' as const;

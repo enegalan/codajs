@@ -1,0 +1,99 @@
+.object-tree-node {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: inherit;
+  line-height: 1.4;
+}
+
+.object-tree-line {
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 0 0 0 0;
+  user-select: none;
+}
+
+.object-tree-line:hover {
+  background-color: var(--object-tree-hover-bg, rgba(255, 255, 255, 0.05));
+}
+
+.object-tree-toggle {
+  display: inline-block;
+  width: 14px;
+  color: var(--console-line-number, #858585);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.object-tree-children {
+  padding-left: 16px;
+  border-left: 1px solid var(--object-tree-indent-border, rgba(128, 128, 128, 0.2));
+  margin-left: 6px;
+}
+
+.object-tree-child {
+  margin: 0;
+}
+
+.object-tree-key {
+  color: var(--object-tree-key-color, #9cdcfe);
+  flex-shrink: 0;
+}
+
+.object-tree-leaf {
+  display: inline;
+}
+
+.object-tree-null {
+  color: var(--object-tree-null-color, #569cd6);
+}
+
+.object-tree-undefined {
+  color: var(--object-tree-undefined-color, #858585);
+}
+
+.object-tree-string {
+  color: var(--object-tree-string-color, #ce9178);
+}
+
+.object-tree-number {
+  color: var(--object-tree-number-color, #b5cea8);
+}
+
+.object-tree-boolean {
+  color: var(--object-tree-boolean-color, #569cd6);
+}
+
+.object-tree-function {
+  color: var(--object-tree-function-color, #dcdcaa);
+}
+
+.object-tree-symbol {
+  color: var(--object-tree-symbol-color, #d7ba7d);
+}
+
+.object-tree-circular,
+.object-tree-maxDepth,
+.object-tree-getter,
+.object-tree-truncated {
+  color: var(--object-tree-meta-color, #858585);
+  font-style: italic;
+}
+
+.object-tree-error {
+  color: var(--console-error, #f48771);
+}
+
+.object-tree-object-preview {
+  color: var(--object-tree-object-color, #4ec9b0);
+}
+
+.object-tree-array-preview {
+  color: var(--object-tree-array-color, #4ec9b0);
+}
+
+.object-tree-empty {
+  color: var(--object-tree-meta-color, #858585);
+  font-style: italic;
+  padding-left: 20px;
+}

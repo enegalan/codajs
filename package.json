@@ -41,7 +41,8 @@
     "ws": "^8.16.0"
   },
   "optionalDependencies": {
-    "isolated-vm": "^4.7.1"
+    "isolated-vm": "^4.7.1",
+    "node-web-audio-api": "^1.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",

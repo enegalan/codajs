@@ -14,7 +14,7 @@ export interface ExecutionOptions {
 
 export interface ExecutionResult {
   success: boolean;
-  output: any;
+  output: unknown;
   error?: string;
   executionTime: number;
 }
@@ -80,6 +80,7 @@ export class RuntimeManager {
         timeout: options.timeout || 5000,
         permissions: options.permissions || [],
         workspaceId: options.workspaceId,
+        signal: this.abortController.signal,
       });
 
       return {
@@ -87,8 +88,8 @@ export class RuntimeManager {
         output,
         executionTime: Date.now() - startTime,
       };
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           output: null,
@@ -112,5 +113,20 @@ export class RuntimeManager {
       this.abortController.abort();
       this.abortController = null;
     }
+    for (const adapter of this.adapters.values()) {
+      adapter.killCurrentExecution();
+    }
+  }
+
+  public prepareScriptForBrowser(script: string): {
+    wrappedScript: string;
+    resultLine: number;
+    expressionLines: Array<[number, string]>;
+  } {
+    const nodeAdapter = this.adapters.get('node');
+    if (nodeAdapter && 'prepareScriptForBrowser' in nodeAdapter) {
+      return (nodeAdapter as NodeAdapter).prepareScriptForBrowser(script);
+    }
+    throw new Error('Browser script preparation is not available');
   }
 }

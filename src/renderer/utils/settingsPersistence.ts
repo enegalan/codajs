@@ -10,7 +10,7 @@ export interface AppSettings {
   };
   compilation: {
     timeout: number;
-    defaultRuntime: 'node' | 'deno' | 'bun';
+    defaultRuntime: 'node' | 'deno' | 'bun' | 'browser';
   };
   appearance: {
     theme:
@@ -47,7 +47,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   compilation: {
     timeout: 5000,
-    defaultRuntime: 'node',
+    defaultRuntime: 'browser',
   },
   appearance: {
     theme: 'dark',
